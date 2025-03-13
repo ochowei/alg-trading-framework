@@ -15,8 +15,8 @@ def testing_stock_ordering():
     accounts = api.login(
         api_key=os.environ["API_KEY"],
         secret_key=os.environ["SECRET_KEY"],
-        ca_cert_path=os.environ["CA_CERT_PATH"],
-        ca_password=os.environ["CA_PASSWORD"],
+        # ca_cert_path=os.environ["CA_CERT_PATH"],
+        # ca_password=os.environ["CA_PASSWORD"],
     )
     # 顯示所有可用的帳戶
     print(f"Available accounts: {accounts}")
@@ -48,6 +48,12 @@ def testing_stock_ordering():
     # 更新狀態
     api.update_status()
     print(f"Status: {trade.status}")
+    balance = api.account_balance()  # 讀取餘額
+    print(balance)
+    data = api.Contracts.Stocks["2890"]
+    print(data)
+# or api.Contracts.Stocks.TSE.TSE2890
+
 
 
 def testing_futures_ordering():

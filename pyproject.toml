@@ -9,6 +9,10 @@ dependencies = [
     "polars>=1.9.0",
     "python-dotenv>=1.0.1",
     "shioaji[speed]>=1.2.5",
+    "backtrader>=1.9.78.123",
+    "pandas>=2.2.3",
+    "matplotlib>=3.10.1",
+    "yfinance>=0.2.54",
 ]
 
 [project.scripts]
@@ -17,7 +21,7 @@ main = "sj_trading:main"
 version = "sj_trading:show_version"
 stock_testing = "sj_trading.testing_flow:testing_stock_ordering"
 futures_testing = "sj_trading.testing_flow:testing_futures_ordering"
-
+my_test = "sj_trading.backtrader_sinopac:my_test"
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
