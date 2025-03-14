@@ -16,7 +16,7 @@ def init_logger():
         console_handler = logging.StreamHandler()
         console_handler.setLevel(logging.INFO)
         console_handler.setFormatter(formatter)
-        logger.addHandler(console_handler)
+        # logger.addHandler(console_handler)
 
         # ✅ 設定 file handler（確保 log 不會被重複寫入）
         file_handler = logging.FileHandler('turtle_strategy.log', mode='w', encoding="utf-8")
