@@ -294,3 +294,92 @@ class TurtleStrategy_v1_1_1(bt.Strategy):
 
 
 
+class TurtleStrategy_v4_1(bt.Strategy):
+    """
+    海龜交易策略（改進版 v4.1）
+    ✅ 使用 ADX 過濾盤整市場（ADX > 20）
+    ✅ 使用布林通道過濾低波動市場（布林通道寬度 > ATR）
+    ✅ **避免當沖**（確保持倉至少一天）
+    ✅ **新增日誌記錄**
+    ✅ **新增交易範圍控制 (`start_date`, `skip_dates`)**
+    ✅ **新增最大倉位限制（最多 90% 資金進場）**
+    """
+    
+    params = (
+        ("entry_period", 20), 
+        ("exit_period", 10), 
+        ("risk", 0.02),
+        ("start_date", datetime(2025, 1, 1)),  # 只在這個日期之後交易
+        ("skip_dates", []),  # 這些日期不交易
+    )
+    
+    def __init__(self):
+        self.logger = init_logger()
+        
+        self.entry_high = bt.indicators.Highest(self.data.high(-1), period=self.params.entry_period)
+        self.exit_low = bt.indicators.Lowest(self.data.low(-1), period=self.params.exit_period)
+        
+        self.adx = bt.indicators.ADX(period=14)
+        self.boll = bt.indicators.BollingerBands(period=20)
+        self.boll_width = self.boll.lines.top - self.boll.lines.bot
+        
+        self.atr = bt.indicators.ATR(self.data, period=14)
+        
+        self.last_trade_date = None
+    
+    def next(self):
+        trade_date = self.datas[0].datetime.date(0)
+        price = self.data.close[0]
+        portfolio_value = self.broker.getvalue()
+        
+        # 🚀 **過濾：只在 start_date 之後交易**
+        if trade_date < self.params.start_date.date():
+            return  # 忽略早於 start_date 的訊號
+        
+        # 🚀 **過濾：跳過指定日期**
+        if trade_date in [d.date() for d in self.params.skip_dates]:
+            self.logger.info(f"❌ {trade_date} - 設定為不交易日，跳過")
+            return  # 不交易，直接返回
+
+        if self.last_trade_date == trade_date:
+            return  # 避免當沖
+        
+        cash = self.broker.get_cash()
+        atr_risk = self.atr[0] * 2
+        size = (cash * self.params.risk) / atr_risk
+        
+        required_cash = size * price
+        max_position_value = cash * 0.9
+        if required_cash > max_position_value:
+            size = max_position_value / price  # 調整 size 以符合最大倉位限制
+        
+        size = int(size)
+        
+        if not self.position and self.adx[0] > 20 and self.boll_width[0] > self.atr[0] and price > self.entry_high[0]:
+            self.logger.info(f"💡 {trade_date} | 嘗試買入 @ {price:.2f} | Size: {size}")
+            self.buy(size=size)
+            self.last_trade_date = trade_date
+        elif self.position and price < self.exit_low[0]:
+            self.logger.info(f"💡 {trade_date} | 嘗試賣出 @ {price:.2f}")
+            self.close()
+            self.last_trade_date = trade_date
+    
+    def notify_order(self, order):
+        trade_date = self.datas[0].datetime.date(0)
+        action = "買進" if order.isbuy() else "賣出"
+        cash_remain = self.broker.get_cash()
+        portfolio_value = self.broker.getvalue()
+        price = order.executed.price if order.executed else 0
+        size = order.executed.size if order.executed else 0
+        
+        if order.status in [order.Completed]:
+            cost = order.executed.value
+            commission = order.executed.comm
+            self.logger.info(f"✅ {trade_date} | {action} @ {price:.2f} | Size: {size}")
+            self.logger.info(f"➡ 交易金額: {cost:.2f} | 現金餘額: {cash_remain:.2f} | 總資產: {portfolio_value:.2f} | 交易成本: {commission:.2f}")
+    
+    def stop(self):
+        total_commission = self.broker.get_value() - self.broker.cash
+        final_value = self.broker.getvalue()
+        self.logger.info(f"🔹 回測結束 | 版本: v4.1 | Entry Period: {self.params.entry_period}, Exit Period: {self.params.exit_period}")
+        self.logger.info(f"🔹 最終資產價值: {final_value:.2f} | 總手續費支出: {total_commission:.2f}")
