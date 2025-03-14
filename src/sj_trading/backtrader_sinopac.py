@@ -34,7 +34,7 @@ def my_test():
     print('Starting Portfolio Value: %.2f' % cerebro.broker.getvalue())
     cerebro.optstrategy(
         TurtleStrategy_v1_1_1,
-        start_date=datetime(2022,1,1),
+        start_date=datetime(2024,7,1),
         entry_period=range(10, 31, 10),  # 測試 10, 20, 30, 40, 50 天突破
         exit_period=range(10, 21, 5)      # 測試 5, 10, 15, 20 天回撤
     )
@@ -43,6 +43,7 @@ def my_test():
     cerebro.addanalyzer(bt.analyzers.SharpeRatio, _name='sharpe')
     cerebro.addanalyzer(bt.analyzers.DrawDown, _name='drawdown')
     cerebro.addanalyzer(bt.analyzers.TradeAnalyzer, _name='trade')
+    cerebro.addanalyzer(bt.analyzers.Returns, _name='returns')  # 加入報酬率分析器
 
     # cerebro.addstrategy(TurtleStrategy_v1_1_1)
     optimized_results = cerebro.run(maxcpus=1)
@@ -63,6 +64,7 @@ def my_test():
 
         max_drawdown = strat.analyzers.drawdown.get_analysis()["max"]["drawdown"]
         trade_analysis = strat.analyzers.trade.get_analysis()
+        cumulative_return = strat.analyzers.returns.get_analysis().get("rtot", None)  # 取得累積報酬率
 
         win_rate = trade_analysis["won"]["total"] / trade_analysis["total"]["total"] if trade_analysis["total"]["total"] > 0 else 0
         profit_factor = (trade_analysis["won"]["pnl"]["total"] / abs(trade_analysis["lost"]["pnl"]["total"])) if trade_analysis["lost"]["pnl"]["total"] != 0 else float('inf')
@@ -72,6 +74,10 @@ def my_test():
         print(f"Max Drawdown: {max_drawdown:.2f}%")
         print(f"Win Rate: {win_rate:.2%}")
         print(f"Profit Factor: {profit_factor:.2f}")
+        print(f"Cumulative Return: {cumulative_return:.2%}" if cumulative_return is not None else "Cumulative Return: 無法計算")
+        final_value = cerebro.broker.getvalue()
+        print(f"Final Portfolio Value: {final_value:.2f}")
+
 
         # 確保 Sharpe Ratio 有效
         if sharpe is not None and sharpe > best_sharpe:
