@@ -1,7 +1,30 @@
 import backtrader as bt
 import shioaji as sj
 from datetime import datetime
+import logging
 
+
+def init_logger():
+    logger = logging.getLogger(__name__)
+    logger.setLevel(logging.INFO)
+
+    # ✅ 確保只添加 handler 一次，避免重複輸出 log
+    if not logger.hasHandlers():
+        formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+
+        # ✅ 設定 console handler
+        console_handler = logging.StreamHandler()
+        console_handler.setLevel(logging.INFO)
+        console_handler.setFormatter(formatter)
+        logger.addHandler(console_handler)
+
+        # ✅ 設定 file handler（確保 log 不會被重複寫入）
+        file_handler = logging.FileHandler('turtle_strategy.log', mode='w', encoding="utf-8")
+        file_handler.setLevel(logging.INFO)
+        file_handler.setFormatter(formatter)
+        logger.addHandler(file_handler)
+
+    return logger
 class TurtleStrategy_v1_1(bt.Strategy):
     """
     海龜交易策略（Turtle Trading Strategy）v1.1
@@ -150,7 +173,6 @@ class TurtleStrategy_v4_0(bt.Strategy):
         print(f"🔹 回測結束 | 版本: v1.1 | Entry Period: {self.params.entry_period}, Exit Period: {self.params.exit_period}")
         print(f"最終資產價值: {final_value:.2f} | 總手續費支出: {total_commission:.2f} |")
 
-
 class TurtleStrategy_v1_1_1(bt.Strategy):
     """
     海龜交易策略 v1.1.1（基於 v1.1）
@@ -163,8 +185,7 @@ class TurtleStrategy_v1_1_1(bt.Strategy):
               ("exit_period", 10),
               ("risk", 0.02),
               ("start_date", datetime(2025, 1, 1)),  # 只在這個日期之後交易
-            #   ("skip_dates", [datetime(2024, 7, 26)]), # 這些日期不交易
-              ("skip_dates",  []),  # 這些日期不交易
+              ("skip_dates", []),  # 這些日期不交易
              )
 
     def __init__(self):
@@ -174,12 +195,15 @@ class TurtleStrategy_v1_1_1(bt.Strategy):
         self.last_trade_date = None
         self.position_entry_date = None
 
-    def next(self):
-        trade_date = self.datas[0].datetime.date(0)  
-        price = self.data.close[0]
-        portfolio_value = self.broker.getvalue()      
+        self.logger = init_logger()
 
-          # 🚀 **過濾：只在 start_date 之後交易**
+
+    def next(self):
+        trade_date = self.datas[0].datetime.date(0)
+        price = self.data.close[0]
+        portfolio_value = self.broker.getvalue()
+
+        # 🚀 **過濾：只在 start_date 之後交易**
         if trade_date < self.params.start_date.date():
             return  # 忽略早於 start_date 的訊號
         
@@ -196,74 +220,76 @@ class TurtleStrategy_v1_1_1(bt.Strategy):
         size = (cash * self.params.risk) / atr_risk
         price = self.data.close[0]
 
-         # 🚀 計算下單所需資金
+        # 🚀 計算下單所需資金
         required_cash = size * price
 
         # ✅ **設定最大倉位比例**
-        max_position_value = cash * 0.8  # 只允許最多 80% 資金進場
+        max_position_value = cash * 0.9  # 只允許最多 90% 資金進場
         if required_cash > max_position_value:
             size = max_position_value / price  # 調整 size 以符合最大倉位限制
 
         # ✅ **確保最終 size 是整數**
         size = int(size)
+
         # ✅ 進場條件：突破 20 天新高
         if not self.position and self.data.close[0] > self.entry_high[0]:
             # 🚀 **過濾：跳過指定日期**
             if trade_date in [d.date() for d in self.params.skip_dates]:
-                print(f"❌ {trade_date} - 設定為不交易日，跳過")
+                self.logger.info(f"❌ {trade_date} - 設定為不交易日，跳過")
                 return  # 不交易，直接返回
                 
-            print(f"💡訊號日期: {trade_date} | B @ {price:.2f}")
+            self.logger.info(f"💡 訊號日期: {trade_date} | 嘗試買入 @ {price:.2f} | Size: {size}")
             self.buy(size=size)
             self.last_trade_date = trade_date
             self.position_entry_date = trade_date  # 記錄買入的日期
         elif self.position and self.data.close[0] < self.exit_low[0]:           
             if trade_date in [d.date() for d in self.params.skip_dates]:
-                print(f"❌ {trade_date} - 設定為不交易日，跳過")
+                self.logger.info(f"❌ {trade_date} - 設定為不交易日，跳過")
                 return  # 不交易，直接返回
             
-            print(f"💡訊號日期: {trade_date} | S @ {price:.2f}")
+            self.logger.info(f"💡 訊號日期: {trade_date} | 嘗試賣出 @ {price:.2f}")
             self.close()
             self.last_trade_date = trade_date
 
     def stop(self):
         total_commission = self.broker.get_value() - self.broker.cash
         final_value = self.broker.getvalue()
-        print(f"🔹 回測結束 | 版本: v1.1.1 | Entry Period: {self.params.entry_period}, Exit Period: {self.params.exit_period}")
-        print(f"🔹 最終資產價值: {final_value:.2f} | 總手續費支出: {total_commission:.2f} |")
+        self.logger.info(f"🔹 回測結束 | 版本: v1.1.1 | Entry Period: {self.params.entry_period}, Exit Period: {self.params.exit_period}")
+        self.logger.info(f"🔹 最終資產價值: {final_value:.2f} | 總手續費支出: {total_commission:.2f} |")
 
     def notify_order(self, order):
         trade_date = self.datas[0].datetime.date(0)
         action = "買進" if order.isbuy() else "賣出"
-        cash_remain = self.broker.get_cash()  # 當前現金餘額
-        portfolio_value = self.broker.getvalue()  # 總資產
-        price = order.created.price if order.created.price else 0  # 下單價格
-        size = order.created.size if order.created.size else 0  # 下單數量
-        required_margin = price * size  # 需要的保證金
+        cash_remain = self.broker.get_cash()
+        portfolio_value = self.broker.getvalue()
+        price = order.created.price if order.created.price else 0
+        size = order.created.size if order.created.size else 0
+        required_margin = price * size
 
         if order.status in [order.Submitted]:
-            print(f"📌 {trade_date} | 訂單已提交: {action} @ {price:.2f} | 倉位大小: {size}")
+            self.logger.info(f"📌 {trade_date} | 訂單已提交: {action} @ {price:.2f} | 倉位大小: {size}")
 
         elif order.status in [order.Accepted]:
-            print(f"📌 {trade_date} | 訂單已接受: {action} @ {price:.2f} | 倉位大小: {size}")
+            self.logger.info(f"📌 {trade_date} | 訂單已接受: {action} @ {price:.2f} | 倉位大小: {size}")
 
-        elif order.status in [order.Completed]:  # 交易完成
-            executed_price = order.executed.price  # 成交價格
-            cost = order.executed.value  # 交易金額
-            commission = order.executed.comm  # 交易手續費
+        elif order.status in [order.Completed]:  
+            executed_price = order.executed.price
+            cost = order.executed.value
+            commission = order.executed.comm
 
-            print(f"✅ 交易完成 | {trade_date} | {action} @ {executed_price:.2f} | 倉位大小: {size}")
-            print(f"     ➡ 交易金額: {cost:.2f} | 現金餘額: {cash_remain:.2f} | 總資產: {portfolio_value:.2f} | 交易成本: {commission:.2f}")
+            self.logger.info(f"✅ 交易完成 | {trade_date} | {action} @ {executed_price:.2f} | 倉位大小: {size}")
+            self.logger.info(f"     ➡ 交易金額: {cost:.2f} | 現金餘額: {cash_remain:.2f} | 總資產: {portfolio_value:.2f} | 交易成本: {commission:.2f}")
 
         elif order.status in [order.Canceled]:
-            print(f"❌ {trade_date} | 訂單已取消: {action} @ {price:.2f} | 倉位大小: {size}")
+            self.logger.warning(f"❌ {trade_date} | 訂單已取消: {action} @ {price:.2f} | 倉位大小: {size}")
 
-        elif order.status in [order.Margin]:  # 保證金不足
-            print(f"⚠️ {trade_date} | 保證金不足，無法執行: {action} @ {price:.2f} | 倉位大小: {size}")
-            print(f"     ➡ 需要保證金: {required_margin:.2f} | 當前現金: {cash_remain:.2f} | 總資產: {portfolio_value:.2f}")
+        elif order.status in [order.Margin]:  
+            self.logger.error(f"⚠️ {trade_date} | 保證金不足，無法執行: {action} @ {price:.2f} | 倉位大小: {size}")
+            self.logger.error(f"     ➡ 需要保證金: {required_margin:.2f} | 當前現金: {cash_remain:.2f} | 總資產: {portfolio_value:.2f}")
 
         elif order.status in [order.Rejected]:
-            print(f"❌ {trade_date} | 訂單被拒絕: {action} @ {price:.2f} | 倉位大小: {size}")
+            self.logger.error(f"❌ {trade_date} | 訂單被拒絕: {action} @ {price:.2f} | 倉位大小: {size}")
+
 
 
 
