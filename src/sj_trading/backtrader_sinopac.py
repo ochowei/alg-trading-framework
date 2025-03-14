@@ -8,15 +8,14 @@ from .taiwan_stock_commission import TaiwanStockCommission
 from .sinopac_data import SinopacData
 import yfinance as yf
 
-# 設定 Shioaji 連線
 
-
-def my_test():
+# 參數優化
+def run_optimization():
     cerebro = bt.Cerebro(optreturn=False)
     ticker = '00757.TW'
-    # trace list: 0050, 2330, 0052, 元大全球 AI（00762）, 00737(國泰全球 AI), 00757(統一 FANG+ ETF)*
+    # trace list: 0050, 2330, 0052, 元大全球 AI（00762）, 00737(國泰全球 AI), 00757(統一 FANG+ ETF)* 00635U.TW(元大美債20年)*
     # 下載並載入數據
-    data_1 = SinopacData.from_yfinance(symbol=ticker, start='2022-01-01', end='2025-12-31')
+    data_1 = SinopacData.from_yfinance(symbol=ticker, start='2024-07-01', end='2025-12-31')
     # stock = yf.Ticker(ticker)
 
     # # 嘗試獲取不同名稱
@@ -33,10 +32,10 @@ def my_test():
 
     print('Starting Portfolio Value: %.2f' % cerebro.broker.getvalue())
     cerebro.optstrategy(
-        TurtleStrategy_v1_1_1,
-        start_date=datetime(2024,7,1),
-        entry_period=range(10, 31, 10),  # 測試 10, 20, 30, 40, 50 天突破
-        exit_period=range(10, 21, 5)      # 測試 5, 10, 15, 20 天回撤
+        TurtleStrategy_v4_0,
+        # start_date=datetime(2024,7,1),
+        entry_period=range(10, 50, 10),  # 測試 10, 20, 30, 40, 50 天突破
+        exit_period=range(10, 41, 5)      # 測試 5, 10, 15, 20 天回撤
     )
 
        # 加入績效分析器

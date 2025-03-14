@@ -21,7 +21,7 @@ main = "sj_trading:main"
 version = "sj_trading:show_version"
 stock_testing = "sj_trading.testing_flow:testing_stock_ordering"
 futures_testing = "sj_trading.testing_flow:testing_futures_ordering"
-my_test = "sj_trading.backtrader_sinopac:my_test"
+run_optimization = "sj_trading.backtrader_sinopac:run_optimization"
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
