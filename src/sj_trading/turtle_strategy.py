@@ -195,6 +195,17 @@ class TurtleStrategy_v1_1_1(bt.Strategy):
         atr_risk = self.atr[0] * 2
         size = (cash * self.params.risk) / atr_risk
         price = self.data.close[0]
+
+         # 🚀 計算下單所需資金
+        required_cash = size * price
+
+        # ✅ **設定最大倉位比例**
+        max_position_value = cash * 0.8  # 只允許最多 80% 資金進場
+        if required_cash > max_position_value:
+            size = max_position_value / price  # 調整 size 以符合最大倉位限制
+
+        # ✅ **確保最終 size 是整數**
+        size = int(size)
         # ✅ 進場條件：突破 20 天新高
         if not self.position and self.data.close[0] > self.entry_high[0]:
             # 🚀 **過濾：跳過指定日期**
@@ -224,15 +235,36 @@ class TurtleStrategy_v1_1_1(bt.Strategy):
     def notify_order(self, order):
         trade_date = self.datas[0].datetime.date(0)
         action = "買進" if order.isbuy() else "賣出"
-        cash_remain = self.broker.get_cash()
-        portfolio_value = self.broker.getvalue()      
-        
-        if order.status in [order.Completed]:  # 確保交易完成後記錄            
-            price = order.executed.price  # 成交價格
+        cash_remain = self.broker.get_cash()  # 當前現金餘額
+        portfolio_value = self.broker.getvalue()  # 總資產
+        price = order.created.price if order.created.price else 0  # 下單價格
+        size = order.created.size if order.created.size else 0  # 下單數量
+        required_margin = price * size  # 需要的保證金
+
+        if order.status in [order.Submitted]:
+            print(f"📌 {trade_date} | 訂單已提交: {action} @ {price:.2f} | 倉位大小: {size}")
+
+        elif order.status in [order.Accepted]:
+            print(f"📌 {trade_date} | 訂單已接受: {action} @ {price:.2f} | 倉位大小: {size}")
+
+        elif order.status in [order.Completed]:  # 交易完成
+            executed_price = order.executed.price  # 成交價格
             cost = order.executed.value  # 交易金額
             commission = order.executed.comm  # 交易手續費
 
-            print(f" 📌 交易日期: {trade_date} | {action} @ {price:.2f}")
+            print(f"✅ 交易完成 | {trade_date} | {action} @ {executed_price:.2f} | 倉位大小: {size}")
             print(f"     ➡ 交易金額: {cost:.2f} | 現金餘額: {cash_remain:.2f} | 總資產: {portfolio_value:.2f} | 交易成本: {commission:.2f}")
+
+        elif order.status in [order.Canceled]:
+            print(f"❌ {trade_date} | 訂單已取消: {action} @ {price:.2f} | 倉位大小: {size}")
+
+        elif order.status in [order.Margin]:  # 保證金不足
+            print(f"⚠️ {trade_date} | 保證金不足，無法執行: {action} @ {price:.2f} | 倉位大小: {size}")
+            print(f"     ➡ 需要保證金: {required_margin:.2f} | 當前現金: {cash_remain:.2f} | 總資產: {portfolio_value:.2f}")
+
+        elif order.status in [order.Rejected]:
+            print(f"❌ {trade_date} | 訂單被拒絕: {action} @ {price:.2f} | 倉位大小: {size}")
+
+
 
 
