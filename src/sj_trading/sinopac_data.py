@@ -17,7 +17,6 @@ def login_sinopac():
     )
     return api
 
-api = login_sinopac()
 
 
 class SinopacData(bt.feeds.PandasData):
@@ -34,6 +33,8 @@ class SinopacData(bt.feeds.PandasData):
 
     @classmethod
     def from_sinopac(cls, symbol, start, end):
+        api = login_sinopac()
+
         """ 從永豐 API 下載歷史數據，並轉換為 Backtrader 可用格式 """
         kbars = api.kbars(api.Contracts.Stocks[symbol], start=start, end=end)
         df = pd.DataFrame({
