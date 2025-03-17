@@ -12,10 +12,10 @@ import yfinance as yf
 # 參數優化
 def run_optimization():
     cerebro = bt.Cerebro(optreturn=False)
-    ticker = '00737.TW'
+    ticker = '0050.TW'
     # trace list: 0050, 2330, 0052, 元大全球 AI（00762）, 00737(國泰全球 AI), 00757(統一 FANG+ ETF)* 00635U.TW(期元大S&P黃金)*
     # 下載並載入數據
-    data_1 = SinopacData.from_yfinance(symbol=ticker, start='2024-07-01', end='2025-12-31')
+    data_1 = SinopacData.from_yfinance(symbol=ticker, start='2020-01-01', end='2025-12-31')
     # stock = yf.Ticker(ticker)
 
     # # 嘗試獲取不同名稱
@@ -32,8 +32,8 @@ def run_optimization():
 
     print('Starting Portfolio Value: %.2f' % cerebro.broker.getvalue())
     cerebro.optstrategy(
-        TurtleStrategy_v4_1,
-        start_date=datetime(2024,7,1),
+        TurtleStrategy_v1_1_1,
+        start_date=datetime(2024,1,1),
         entry_period=range(10, 50, 10),  # 測試 10, 20, 30, 40, 50 天突破
         exit_period=range(10, 41, 5)      # 測試 5, 10, 15, 20 天回撤
     )
