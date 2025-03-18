@@ -10,7 +10,7 @@ import yfinance as yf
 from .logger import init_logger
 
 # 參數優化
-def run_optimization_once(ticker):
+def run_optimization_once(ticker:str, strategy:bt.Strategy, print_strat:bool=False, num_transactions:int=5):
     cerebro = bt.Cerebro(optreturn=False)
     # trace list: 0050, 2330, 0052, 元大全球 AI（00762）, 00737(國泰全球 AI), 00757(統一 FANG+ ETF)* 00635U.TW(期元大S&P黃金)*
     # 下載並載入數據
@@ -33,7 +33,7 @@ def run_optimization_once(ticker):
     cerebro.optstrategy(
         TurtleStrategy_v4_1,
         stock_id=ticker,
-        start_date=datetime(2024,1,1),
+        start_date=datetime(2023,1,1),
         entry_period=range(10, 50, 10),  # 測試 10, 20, 30, 40, 50 天突破
         exit_period=range(10, 41, 5)      # 測試 5, 10, 15, 20 天回撤
     )
@@ -43,7 +43,7 @@ def run_optimization_once(ticker):
     cerebro.addanalyzer(bt.analyzers.DrawDown, _name='drawdown')
     cerebro.addanalyzer(bt.analyzers.TradeAnalyzer, _name='trade')
     cerebro.addanalyzer(bt.analyzers.Returns, _name='returns')  # 加入報酬率分析器
-
+    cerebro.addanalyzer(bt.analyzers.Transactions, _name='transactions')
     # cerebro.addstrategy(TurtleStrategy_v1_1_1)
     optimized_results = cerebro.run(maxcpus=1)
     # print('Ending Portfolio Value: %.2f' % cerebro.broker.getvalue())
@@ -68,36 +68,91 @@ def run_optimization_once(ticker):
         win_rate = trade_analysis["won"]["total"] / trade_analysis["total"]["total"] if trade_analysis["total"]["total"] > 0 else 0
         profit_factor = (trade_analysis["won"]["pnl"]["total"] / abs(trade_analysis["lost"]["pnl"]["total"])) if trade_analysis["lost"]["pnl"]["total"] != 0 else float('inf')
 
-        print(f"\n=== 策略參數: entry={strat.params.entry_period}, exit={strat.params.exit_period} ===")
-        print(f"Sharpe Ratio: {sharpe:.3f}" if sharpe else "Sharpe Ratio: 無法計算")
-        print(f"Max Drawdown: {max_drawdown:.2f}%")
-        print(f"Win Rate: {win_rate:.2%}")
-        print(f"Profit Factor: {profit_factor:.2f}")
-        print(f"Cumulative Return: {cumulative_return:.2%}" if cumulative_return is not None else "Cumulative Return: 無法計算")
-    
+            # for asset, trade in trades.items():
+            #     print(f"date: {date}, ")
+            #     d = {
+            #         "date": date,
+            #         "symbol": asset,
+            #         "size": trade[0],
+            #         "price": trade[1],
+            #         "commission": trade[2]
+            #     }
+            #     print(d)
+
+
+        if print_strat:
+            print(f"\n=== 策略參數: entry={strat.params.entry_period}, exit={strat.params.exit_period} ===")
+            print(f"Sharpe Ratio: {sharpe:.3f}" if sharpe else "Sharpe Ratio: 無法計算")
+            print(f"Max Drawdown: {max_drawdown:.2f}%")
+            print(f"Win Rate: {win_rate:.2%}")
+            print(f"Profit Factor: {profit_factor:.2f}")
+            print(f"Cumulative Return: {cumulative_return:.2%}" if cumulative_return is not None else "Cumulative Return: 無法計算")
+        
 
         # 確保 Sharpe Ratio 有效
         if sharpe is not None and sharpe > best_sharpe:
             best_sharpe = sharpe
-            best_result = strat
+            best_result = {
+                "params": strat.params,
+                "sharpe": sharpe,
+                "max_drawdown": max_drawdown,
+                "win_rate": win_rate,
+                "profit_factor": profit_factor,
+                "cumulative_return": cumulative_return,
+                "strat": strat
+            }
 
     # 顯示最佳策略結果
     if best_result is not None and best_sharpe != -float('inf'):
         print("\n=== 最佳策略 (根據 Sharpe Ratio) ===")
-        print(f"Entry Period: {best_result.params.entry_period}")
-        print(f"Exit Period: {best_result.params.exit_period}")
+        print(f"Entry Period: {best_result["params"].entry_period}")
+        print(f"Exit Period: {best_result["params"].exit_period}")
+        print(f"Sharpe Ratio: {best_result['sharpe']:.3f}")
+        print(f"Max Drawdown: {best_result['max_drawdown']:.2f}%")
+        print(f"Win Rate: {best_result['win_rate']:.2%}")
+        print(f"Profit Factor: {best_result['profit_factor']:.2f}")     
+        print(f"Cumulative Return: {best_result['cumulative_return']:.2%}")   
         print(f"Best Sharpe Ratio: {best_sharpe:.3f}")
+        
+        strat = best_result["strat"]
+        transactions = strat.analyzers.transactions.get_analysis()
+
+        # 轉換交易紀錄為 DataFrame
+        df_trades = []
+        # print last x trades
+        x = num_transactions
+        for date, trades in list(transactions.items())[-x:]:
+            for trade in trades:
+                d = {
+                    "date": f"{date}",
+                    "size": trade[0],
+                    "price": trade[1],
+                    "total": trade[4]
+                }
+                df_trades.append(d)
+        
+        df_trades = pd.DataFrame(df_trades)
+        print(f"\n=== 最後 {x} 筆交易 ===")
+        print(df_trades)
+       
         
     else:
         print("\n⚠️ 無法找到最佳策略，可能是所有策略的 Sharpe Ratio 無法計算。")
+    
+    # 優化結束
+    print(f"結束優化 {ticker} 的策略參數")
     # cerebro.plot()
 
 def run_optimization():
-    ticker = '0050.TW'
-    ticker_list = ['0050.TW', '2330.TW', '0052.TW', '00762.TW', '00737.TW', '00757.TW', '00635U.TW']
+    # tutle 4.1 trace list: 0050.TW, 2330.TW, 00757, 00635U.TW,     
+    
+    ticker_list_1 = ['00757.TW'] # 第一關注目標
+    ticker_list_2 = ['0050.TW', '2330.TW', '00737.TW', '00635U.TW'] # 第二關注目標
 
     logger = init_logger()
-    for ticker in ticker_list:
-        logger.info(f"開始優化 {ticker} 的策略參數")
-        run_optimization_once(ticker)
+    target_list = ticker_list_1
+    
+    for ticker in target_list:
+        print(f"開始優化 {ticker} 的策略參數")
+        run_optimization_once(ticker, TurtleStrategy_v4_1, False, 5)
 
