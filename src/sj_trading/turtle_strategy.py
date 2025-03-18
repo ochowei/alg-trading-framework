@@ -2,29 +2,8 @@ import backtrader as bt
 import shioaji as sj
 from datetime import datetime
 import logging
+from .logger import init_logger
 
-
-def init_logger():
-    logger = logging.getLogger(__name__)
-    logger.setLevel(logging.INFO)
-
-    # ✅ 確保只添加 handler 一次，避免重複輸出 log
-    if not logger.hasHandlers():
-        formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
-
-        # ✅ 設定 console handler
-        console_handler = logging.StreamHandler()
-        console_handler.setLevel(logging.INFO)
-        console_handler.setFormatter(formatter)
-        # logger.addHandler(console_handler)
-
-        # ✅ 設定 file handler（確保 log 不會被重複寫入）
-        file_handler = logging.FileHandler('turtle_strategy.log', mode='w', encoding="utf-8")
-        file_handler.setLevel(logging.INFO)
-        file_handler.setFormatter(formatter)
-        logger.addHandler(file_handler)
-
-    return logger
 class TurtleStrategy_v1_1(bt.Strategy):
     """
     海龜交易策略（Turtle Trading Strategy）v1.1
@@ -194,8 +173,8 @@ class TurtleStrategy_v1_1_1(bt.Strategy):
         self.atr = bt.indicators.ATR(self.data, period=14)
         self.last_trade_date = None
         self.position_entry_date = None
-
         self.logger = init_logger()
+        self.logger.info(f"🔹 回測開始 | 版本: v1.1.1 | Entry Period: {self.params.entry_period}, Exit Period: {self.params.exit_period}")
 
 
     def next(self):
@@ -315,6 +294,9 @@ class TurtleStrategy_v4_1(bt.Strategy):
     
     def __init__(self):
         self.logger = init_logger()
+        # log start and params
+        self.logger.info(f"🔹 回測開始 | 版本: v4.1 | Entry Period: {self.params.entry_period}, Exit Period: {self.params.exit_period}")
+        
         
         self.entry_high = bt.indicators.Highest(self.data.high(-1), period=self.params.entry_period)
         self.exit_low = bt.indicators.Lowest(self.data.low(-1), period=self.params.exit_period)
