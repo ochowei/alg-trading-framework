@@ -7,12 +7,11 @@ from .turtle_strategy import (TurtleStrategy_v1_1, TurtleStrategy_v4_1,TurtleStr
 from .taiwan_stock_commission import TaiwanStockCommission
 from .sinopac_data import SinopacData
 import yfinance as yf
-
+from .logger import init_logger
 
 # 參數優化
-def run_optimization():
+def run_optimization_once(ticker):
     cerebro = bt.Cerebro(optreturn=False)
-    ticker = '0050.TW'
     # trace list: 0050, 2330, 0052, 元大全球 AI（00762）, 00737(國泰全球 AI), 00757(統一 FANG+ ETF)* 00635U.TW(期元大S&P黃金)*
     # 下載並載入數據
     data_1 = SinopacData.from_yfinance(symbol=ticker, start='2020-01-01', end='2025-12-31')
@@ -32,7 +31,8 @@ def run_optimization():
 
     print('Starting Portfolio Value: %.2f' % cerebro.broker.getvalue())
     cerebro.optstrategy(
-        TurtleStrategy_v1_1_1,
+        TurtleStrategy_v4_1,
+        stock_id=ticker,
         start_date=datetime(2024,1,1),
         entry_period=range(10, 50, 10),  # 測試 10, 20, 30, 40, 50 天突破
         exit_period=range(10, 41, 5)      # 測試 5, 10, 15, 20 天回撤
@@ -74,9 +74,7 @@ def run_optimization():
         print(f"Win Rate: {win_rate:.2%}")
         print(f"Profit Factor: {profit_factor:.2f}")
         print(f"Cumulative Return: {cumulative_return:.2%}" if cumulative_return is not None else "Cumulative Return: 無法計算")
-        final_value = cerebro.broker.getvalue()
-        print(f"Final Portfolio Value: {final_value:.2f}")
-
+    
 
         # 確保 Sharpe Ratio 有效
         if sharpe is not None and sharpe > best_sharpe:
@@ -89,6 +87,17 @@ def run_optimization():
         print(f"Entry Period: {best_result.params.entry_period}")
         print(f"Exit Period: {best_result.params.exit_period}")
         print(f"Best Sharpe Ratio: {best_sharpe:.3f}")
+        
     else:
         print("\n⚠️ 無法找到最佳策略，可能是所有策略的 Sharpe Ratio 無法計算。")
     # cerebro.plot()
+
+def run_optimization():
+    ticker = '0050.TW'
+    ticker_list = ['0050.TW', '2330.TW', '0052.TW', '00762.TW', '00737.TW', '00757.TW', '00635U.TW']
+
+    logger = init_logger()
+    for ticker in ticker_list:
+        logger.info(f"開始優化 {ticker} 的策略參數")
+        run_optimization_once(ticker)
+

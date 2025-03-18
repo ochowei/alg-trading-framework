@@ -162,6 +162,7 @@ class TurtleStrategy_v1_1_1(bt.Strategy):
 
     params = (("entry_period", 20),
               ("exit_period", 10),
+              ("stock_id", "2330.TW"),
               ("risk", 0.02),
               ("start_date", datetime(2025, 1, 1)),  # 只在這個日期之後交易
               ("skip_dates", []),  # 這些日期不交易
@@ -233,7 +234,7 @@ class TurtleStrategy_v1_1_1(bt.Strategy):
     def stop(self):
         total_commission = self.broker.get_value() - self.broker.cash
         final_value = self.broker.getvalue()
-        self.logger.info(f"🔹 回測結束 | 版本: v1.1.1 | Entry Period: {self.params.entry_period}, Exit Period: {self.params.exit_period}")
+        self.logger.info(f"🔹 回測結束 | 版本: v1.1.1 | stock_id: {self.params.stock_id} | Entry Period: {self.params.entry_period}, Exit Period: {self.params.exit_period}")
         self.logger.info(f"🔹 最終資產價值: {final_value:.2f} | 總手續費支出: {total_commission:.2f} |")
 
     def notify_order(self, order):
@@ -287,6 +288,7 @@ class TurtleStrategy_v4_1(bt.Strategy):
     params = (
         ("entry_period", 20), 
         ("exit_period", 10), 
+        ("stock_id", "0050.TW"),  # 股票代號
         ("risk", 0.02),
         ("start_date", datetime(2025, 1, 1)),  # 只在這個日期之後交易
         ("skip_dates", []),  # 這些日期不交易
@@ -295,7 +297,7 @@ class TurtleStrategy_v4_1(bt.Strategy):
     def __init__(self):
         self.logger = init_logger()
         # log start and params
-        self.logger.info(f"🔹 回測開始 | 版本: v4.1 | Entry Period: {self.params.entry_period}, Exit Period: {self.params.exit_period}")
+        self.logger.info(f"🔹 回測開始 | 版本: v4.1 | stock_id: {self.params.stock_id} | Entry Period: {self.params.entry_period}, Exit Period: {self.params.exit_period}")
         
         
         self.entry_high = bt.indicators.Highest(self.data.high(-1), period=self.params.entry_period)
@@ -363,5 +365,5 @@ class TurtleStrategy_v4_1(bt.Strategy):
     def stop(self):
         total_commission = self.broker.get_value() - self.broker.cash
         final_value = self.broker.getvalue()
-        self.logger.info(f"🔹 回測結束 | 版本: v4.1 | Entry Period: {self.params.entry_period}, Exit Period: {self.params.exit_period}")
+        self.logger.info(f"🔹 回測結束 | 版本: v4.1 | stock_id: {self.params.stock_id} | Entry Period: {self.params.entry_period}, Exit Period: {self.params.exit_period}")
         self.logger.info(f"🔹 最終資產價值: {final_value:.2f} | 總手續費支出: {total_commission:.2f}")
