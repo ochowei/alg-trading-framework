@@ -74,8 +74,6 @@ class SinopacData(bt.feeds.PandasData):
         # 確保索引為日期格式
         df.index = pd.to_datetime(df.index)
         all_data = bt.feeds.PandasData(dataname=df)
-        print("timezone")
-        print(df.index.tz)  # 輸出時區資訊
 
         # 確保回傳時 dataname 傳入的是 DataFrame
         return all_data
