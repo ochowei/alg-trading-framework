@@ -8,6 +8,7 @@ from .taiwan_stock_commission import TaiwanStockCommission
 from .sinopac_data import SinopacData
 import yfinance as yf
 from .logger import init_logger
+import json
 
 # 參數優化
 def run_optimization_once(ticker:str, strategy:bt.Strategy, print_strat:bool=False, num_transactions:int=5):
@@ -152,7 +153,28 @@ def run_optimization():
     logger = init_logger()
     target_list = ticker_list_1
     
+    # read json from ./data/ETF.json with utf-8
+    etf_codes = []
+
+    with open('data/ETF.json', 'r', encoding='utf-8') as f:
+        data = json.load(f)
+        for etf in data:
+            code = etf["基金代號"]
+            # concat code with .TW
+            etf_codes.append(f"{code}.TW")
+            
+    # print(f"目標清單: {target_list}")
+    target_list = etf_codes
+    error_targets = []
+
     for ticker in target_list:
         print(f"開始優化 {ticker} 的策略參數")
-        run_optimization_once(ticker, TurtleStrategy_v4_1, False, 5)
+        try:
+            run_optimization_once(ticker, TurtleStrategy_v4_1, False, 5)
+        except Exception as e:
+            print(e)
+            print(f"優化 {ticker} 的策略參數時發生錯誤: {e}")
+            error_targets.append({ticker: str(e)})
+    print(f"優化結束，發生錯誤的清單: {error_targets}")
+            
 
