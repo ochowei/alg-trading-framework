@@ -26,6 +26,8 @@ futures_testing = "sj_trading.testing_flow:testing_futures_ordering"
 run_optimization = "sj_trading.backtrader:run_optimization"
 test_frequency = "sj_trading.backtrader_sinopac:test_frequency"
 test = "sj_trading.finmind:test"
+download_data = "sj_trading.backtrader:download_data"
+
 
 [build-system]
 requires = ["hatchling"]

@@ -18,7 +18,6 @@ def login_sinopac():
     return api
 
 
-
 class SinopacData(bt.feeds.PandasData):
     """ 自定義 Backtrader 數據源，格式化永豐 API 和 yfinance 的數據 """
     params = (
@@ -75,6 +74,33 @@ class SinopacData(bt.feeds.PandasData):
         df.index = pd.to_datetime(df.index)
         all_data = bt.feeds.PandasData(dataname=df)
 
+        # 確保回傳時 dataname 傳入的是 DataFrame
+        return all_data
+
+    @classmethod
+    def read_csv(self):
+        df = pd.read_csv("combined_stock_data.csv")                
+        return df
+    
+    @classmethod
+    def list_tickers(self, df):
+        tickers = df['Ticker'].unique()
+        return tickers
+
+    @classmethod
+    def from_csv_df(self, df, symbol, start, end):
+
+        df_bd = df[df['Ticker'] == symbol]
+        r_df = df_bd[(df_bd['Date'] >= start) & (df_bd['Date'] <= end)].copy()
+        r_df['Date'] = pd.to_datetime(r_df['Date'])
+        r_df = r_df.rename(columns={'Open': 'open', 'High': 'high', 'Low': 'low', 'Close': 'close', 'Volume': 'volume'})
+        r_df = r_df[['Date', 'open', 'high', 'low', 'close', 'volume']]
+        r_df.set_index('Date', inplace=True)
+        r_df.dropna(inplace=True)
+        if r_df.empty:
+            print(f"⚠️ {symbol} 在 {start} 至 {end} 之間沒有數據")
+            return None
+        all_data = bt.feeds.PandasData(dataname=r_df)
         # 確保回傳時 dataname 傳入的是 DataFrame
         return all_data
 
