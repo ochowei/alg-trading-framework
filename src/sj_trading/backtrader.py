@@ -38,7 +38,7 @@ def run_optimization_once(df:pd.DataFrame ,ticker:str, strategy:bt.Strategy, pri
     cerebro.optstrategy(
         TurtleStrategy_v4_1,
         stock_id=ticker,
-        start_date=datetime(2024,3,20),
+        start_date=datetime(2023,3,20),
         entry_period=range(10, 50, 10),  # 測試 10, 20, 30, 40, 50 天突破
         exit_period=range(10, 41, 5)      # 測試 5, 10, 15, 20 天回撤
     )
@@ -120,42 +120,13 @@ def run_optimization_once(df:pd.DataFrame ,ticker:str, strategy:bt.Strategy, pri
 
     # 顯示最佳策略結果
     if best_result is not None and best_sharpe != -float('inf'):
-        annual_return = best_result["strat"].analyzers.returns.get_analysis().get("rnorm", None)
-        print("\n=== 最佳策略 (根據 Sharpe Ratio) ===")
-        print(f"Entry Period: {best_result["params"].entry_period}")
-        print(f"Exit Period: {best_result["params"].exit_period}")
-        print(f"Sharpe Ratio: {best_result['sharpe']:.3f}")
-        print(f"Max Drawdown: {best_result['max_drawdown']:.2f}%")
-        print(f"Win Rate: {best_result['win_rate']:.2%}")
-        print(f"Profit Factor: {best_result['profit_factor']:.2f}")     
-        print(f"Cumulative Return: {best_result['cumulative_return']:.2%}") 
-        print(f"Annual Return: {annual_return:.2%}")
-        print(f"Best Sharpe Ratio: {best_sharpe:.3f}")
         
-        strat = best_result["strat"]
-        transactions = strat.analyzers.transactions.get_analysis()
-
-        # 轉換交易紀錄為 DataFrame
-        df_trades = []
-        # print last x trades
-        x = num_transactions
-        for date, trades in list(transactions.items())[-x:]:
-            for trade in trades:
-                d = {
-                    "date": f"{date}",
-                    "size": trade[0],
-                    "price": trade[1],
-                    "total": trade[4]
-                }
-                df_trades.append(d)
-        
-        df_trades = pd.DataFrame(df_trades)
-        print(f"\n=== 最後 {x} 筆交易 ===")
-        print(df_trades)
+        return best_result
        
         
     else:
         print("\n⚠️ 無法找到最佳策略，可能是所有策略的 Sharpe Ratio 無法計算。")
+        return None
     
     
     # cerebro.plot()
@@ -172,10 +143,43 @@ def run_optimization():
     
     # read json from ./data/ETF.json with utf-8           
     # print(f"目標清單: {target_list}")
-
+    num_transactions = 5
     for ticker in target_list:
         print(f"開始優化 {ticker} 的策略參數")
-        run_optimization_once(dataframe, ticker, TurtleStrategy_v4_1, False, 5)
+        best_result = run_optimization_once(dataframe, ticker, TurtleStrategy_v4_1, False, 5)
+        if best_result is not None and best_result['sharpe'] != -float('inf'):
+            annual_return = best_result["strat"].analyzers.returns.get_analysis().get("rnorm", None)
+            print("\n=== 最佳策略 (根據 Sharpe Ratio) ===")
+            print(f"Entry Period: {best_result["params"].entry_period}")
+            print(f"Exit Period: {best_result["params"].exit_period}")
+            print(f"Sharpe Ratio: {best_result['sharpe']:.3f}")
+            print(f"Max Drawdown: {best_result['max_drawdown']:.2f}%")
+            print(f"Win Rate: {best_result['win_rate']:.2%}")
+            print(f"Profit Factor: {best_result['profit_factor']:.2f}")     
+            print(f"Cumulative Return: {best_result['cumulative_return']:.2%}") 
+            print(f"Annual Return: {annual_return:.2%}")
+            
+            strat = best_result["strat"]
+            transactions = strat.analyzers.transactions.get_analysis()
+
+            # 轉換交易紀錄為 DataFrame
+            df_trades = []
+            # print last x trades
+            x = num_transactions
+            for date, trades in list(transactions.items())[-x:]:
+                for trade in trades:
+                    d = {
+                        "date": f"{date}",
+                        "size": trade[0],
+                        "price": trade[1],
+                        "total": trade[4]
+                    }
+                    df_trades.append(d)
+            
+            df_trades = pd.DataFrame(df_trades)
+            print(f"\n=== 最後 {x} 筆交易 ===")
+            print(df_trades)
+
         print(f"結束優化 {ticker} 的策略參數")
        
 
