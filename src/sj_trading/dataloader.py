@@ -18,7 +18,7 @@ def login_sinopac():
     return api
 
 
-class SinopacData(bt.feeds.PandasData):
+class Dataloader(bt.feeds.PandasData):
     """ 自定義 Backtrader 數據源，格式化永豐 API 和 yfinance 的數據 """
     params = (
         ('datetime', None),

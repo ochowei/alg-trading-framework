@@ -5,7 +5,7 @@ import os
 from datetime import datetime
 from .turtle_strategy import (TurtleStrategy_v1_1, TurtleStrategy_v4_1,TurtleStrategy_v4_0, TurtleStrategy_v1_1_1)
 from .taiwan_stock_commission import TaiwanStockCommission
-from .sinopac_data import SinopacData
+from .dataloader import Dataloader
 import yfinance as yf
 from .logger import init_logger
 import json
@@ -15,7 +15,7 @@ def run_optimization_once(df:pd.DataFrame ,ticker:str, strategy:bt.Strategy, pri
     cerebro = bt.Cerebro(optreturn=False)
     # trace list: 0050, 2330, 0052, 元大全球 AI（00762）, 00737(國泰全球 AI), 00757(統一 FANG+ ETF)* 00635U.TW(期元大S&P黃金)*
     # 下載並載入數據
-    data_1 = SinopacData.from_csv_df(df=df, symbol=ticker, start='2000-01-01', end='2025-12-31')
+    data_1 = Dataloader.from_csv_df(df=df, symbol=ticker, start='2000-01-01', end='2025-12-31')
     # stock = yf.Ticker(ticker)
     # check if data_1 is Less than 1
     if data_1 is None:
@@ -132,12 +132,12 @@ def run_optimization_once(df:pd.DataFrame ,ticker:str, strategy:bt.Strategy, pri
     # cerebro.plot()
 
 def run_optimization():
-    dataframe =  SinopacData.read_csv()
+    dataframe =  Dataloader.read_csv()
 
     # tutle 4.1 trace list: 0050.TW, 2330.TW, 00757, 00635U.TW    
     ticker_list_1 = ['00757.TW'] # 第一關注目標
     ticker_list_2 = ['0050.TW', '2330.TW', '00737.TW', '00635U.TW'] # 第二關注目標
-    tickers = SinopacData.list_tickers(dataframe)
+    tickers = Dataloader.list_tickers(dataframe)
     logger = init_logger()
     target_list = tickers
     
