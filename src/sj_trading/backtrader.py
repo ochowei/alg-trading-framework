@@ -131,6 +131,39 @@ def run_optimization_once(df:pd.DataFrame ,ticker:str, strategy:bt.Strategy, pri
     
     # cerebro.plot()
 
+def print_backtest_result(bt_result, num_transactions: int):
+    strat = bt_result["strat"]
+    transactions = strat.analyzers.transactions.get_analysis()
+
+    # 轉換交易紀錄為 DataFrame
+    df_trades = []
+    # print last x trades
+    
+    for date, trades in list(transactions.items())[-num_transactions:]:
+        for trade in trades:
+            d = {
+                "date": f"{date}",
+                "size": trade[0],
+                "price": trade[1],
+                "total": trade[4]
+            }
+            df_trades.append(d)
+    
+    df_trades = pd.DataFrame(df_trades)
+
+    annual_return = bt_result["strat"].analyzers.returns.get_analysis().get("rnorm", None)
+    sharpe = bt_result["sharpe"]
+    print(f"\n=== 最後 {num_transactions} 筆交易 ===")
+    print(df_trades)       
+    print(f"Entry Period: {bt_result["params"].entry_period}")
+    print(f"Exit Period: {bt_result["params"].exit_period}")
+    print(f"Sharpe Ratio: {sharpe:.3f}")
+    print(f"Max Drawdown: {bt_result['max_drawdown']:.2f}%")
+    print(f"Win Rate: {bt_result['win_rate']:.2%}")
+    print(f"Profit Factor: {bt_result['profit_factor']:.2f}")     
+    print(f"Cumulative Return: {bt_result['cumulative_return']:.2%}") 
+    print(f"Annual Return: {annual_return:.2%}")
+
 def run_optimization():
     dataframe =  Dataloader.read_csv()
 
@@ -145,6 +178,8 @@ def run_optimization():
     # print(f"目標清單: {target_list}")
     num_transactions = 5
     errors = []
+    watch_list = []
+    
     for ticker in target_list:
         print(f"開始優化 {ticker} 的策略參數")
         best_result = None
@@ -159,16 +194,13 @@ def run_optimization():
             annual_return = best_result["strat"].analyzers.returns.get_analysis().get("rnorm", None)
             sharpe = best_result["sharpe"]
             if (annual_return < 0 or sharpe < 0.1):
-                continue        
-            
+                continue          
+            df_trades = []
+    # print last x trades
             strat = best_result["strat"]
             transactions = strat.analyzers.transactions.get_analysis()
 
-            # 轉換交易紀錄為 DataFrame
-            df_trades = []
-            # print last x trades
-            x = num_transactions
-            for date, trades in list(transactions.items())[-x:]:
+            for date, trades in list(transactions.items())[-num_transactions:]:
                 for trade in trades:
                     d = {
                         "date": f"{date}",
@@ -176,22 +208,13 @@ def run_optimization():
                         "price": trade[1],
                         "total": trade[4]
                     }
-                    df_trades.append(d)
-            
+                    df_trades.append(d)     
+                    
             df_trades = pd.DataFrame(df_trades)
           
-            if (df_trades['date'].max() > "2025-03-01"):     
-                print(f"\n=== 最後 {x} 筆交易 ===")
-                print(df_trades)       
+            if (df_trades['date'].max() > "2025-03-01"):
                 print("\n=== 最佳策略 (根據 Sharpe Ratio) ===")
-                print(f"Entry Period: {best_result["params"].entry_period}")
-                print(f"Exit Period: {best_result["params"].exit_period}")
-                print(f"Sharpe Ratio: {sharpe:.3f}")
-                print(f"Max Drawdown: {best_result['max_drawdown']:.2f}%")
-                print(f"Win Rate: {best_result['win_rate']:.2%}")
-                print(f"Profit Factor: {best_result['profit_factor']:.2f}")     
-                print(f"Cumulative Return: {best_result['cumulative_return']:.2%}") 
-                print(f"Annual Return: {annual_return:.2%}")
+                watch_list.append({"ticker": ticker, "bt_result": best_result})
 
         print(f"結束優化 {ticker} 的策略參數")
 
@@ -200,7 +223,10 @@ def run_optimization():
         for error in errors:
             print(f"股票代號: {error['ticker']}, 錯誤: {error['error']}")
     print("🎉 優化完成！")
-       
+    for x in watch_list:
+        print(f"\n\nCode: {x["ticker"]}")
+        print_backtest_result(bt_result=x["bt_result"], num_transactions=5)
+
 
 def download_data():
     etf_codes = []
