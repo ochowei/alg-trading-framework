@@ -171,7 +171,7 @@ def run_optimization():
     ticker_list_1 = ['00757.TW'] # 第一關注目標
     ticker_list_2 = ['0050.TW', '2330.TW', '00737.TW', '00635U.TW'] # 第二關注目標
     tickers = Dataloader.list_tickers(dataframe)
-    logger = init_logger()
+    logger = init_logger("backtrader.log")
     target_list = tickers
     
     # read json from ./data/ETF.json with utf-8           

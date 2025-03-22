@@ -1,8 +1,8 @@
 import logging
 
 
-def init_logger():
-    logger = logging.getLogger(__name__)
+def init_logger(filename):
+    logger = logging.getLogger(filename)
     logger.setLevel(logging.INFO)
 
     # ✅ 確保只添加 handler 一次，避免重複輸出 log
@@ -16,7 +16,7 @@ def init_logger():
         # logger.addHandler(console_handler)
 
         # ✅ 設定 file handler（確保 log 不會被重複寫入）
-        file_handler = logging.FileHandler('turtle_strategy.log', mode='w', encoding="utf-8")
+        file_handler = logging.FileHandler(f'log/{filename}', mode='w', encoding="utf-8")
         file_handler.setLevel(logging.INFO)
         file_handler.setFormatter(formatter)
         logger.addHandler(file_handler)

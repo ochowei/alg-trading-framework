@@ -295,9 +295,11 @@ class TurtleStrategy_v4_1(bt.Strategy):
     )
     
     def __init__(self):
-        self.logger = init_logger()
+        stock_id = self.params.stock_id
+        log_filename = f"{stock_id}_tutle_strategy.log"
+        self.logger = init_logger(log_filename)
         # log start and params
-        self.logger.info(f"🔹 回測開始 | 版本: v4.1 | stock_id: {self.params.stock_id} | Entry Period: {self.params.entry_period}, Exit Period: {self.params.exit_period}")
+        self.logger.info(f"🔹 回測開始 | 版本: v4.1 | stock_id: {stock_id} | Entry Period: {self.params.entry_period}, Exit Period: {self.params.exit_period}")
         
         
         self.entry_high = bt.indicators.Highest(self.data.high(-1), period=self.params.entry_period)
@@ -310,12 +312,13 @@ class TurtleStrategy_v4_1(bt.Strategy):
         self.atr = bt.indicators.ATR(self.data, period=14)
         
         self.last_trade_date = None
+        self.total_commission = 0
     
     def next(self):
         trade_date = self.datas[0].datetime.date(0)
         price = self.data.close[0]
         portfolio_value = self.broker.getvalue()
-        
+
         # 🚀 **過濾：只在 start_date 之後交易**
         if trade_date < self.params.start_date.date():
             return  # 忽略早於 start_date 的訊號
@@ -330,7 +333,7 @@ class TurtleStrategy_v4_1(bt.Strategy):
         
         cash = self.broker.get_cash()
         atr_risk = self.atr[0] * 2
-        size = (cash * self.params.risk) / atr_risk
+        size = (cash * 1 * self.params.risk) / atr_risk
         
         required_cash = size * price
         max_position_value = cash * 0.9
@@ -338,13 +341,12 @@ class TurtleStrategy_v4_1(bt.Strategy):
             size = max_position_value / price  # 調整 size 以符合最大倉位限制
         
         size = int(size)
-        
-        if not self.position and self.adx[0] > 20 and self.boll_width[0] > self.atr[0] and price > self.entry_high[0]:
-            self.logger.info(f"💡 {trade_date} | 嘗試買入 @ {price:.2f} | Size: {size}")
+        if  self.adx[0] > 20 and self.boll_width[0] > self.atr[0] and price > self.entry_high[0]:
+            self.logger.info(f"💡 {trade_date} | 嘗試買入 {self.params.stock_id} @ {price:.2f} | Size: {size}")
             self.buy(size=size)
             self.last_trade_date = trade_date
         elif self.position and price < self.exit_low[0]:
-            self.logger.info(f"💡 {trade_date} | 嘗試賣出 @ {price:.2f}")
+            self.logger.info(f"💡 {trade_date} | 嘗試賣出 {self.params.stock_id} @ {price:.2f}")
             self.close()
             self.last_trade_date = trade_date
     
@@ -359,11 +361,12 @@ class TurtleStrategy_v4_1(bt.Strategy):
         if order.status in [order.Completed]:
             cost = order.executed.value
             commission = order.executed.comm
+            self.total_commission += commission
             self.logger.info(f"✅ {trade_date} | {action} @ {price:.2f} | Size: {size}")
             self.logger.info(f"➡ 交易金額: {cost:.2f} | 現金餘額: {cash_remain:.2f} | 總資產: {portfolio_value:.2f} | 交易成本: {commission:.2f}")
     
     def stop(self):
-        total_commission = self.broker.get_value() - self.broker.cash
+        total_commission = self.total_commission
         final_value = self.broker.getvalue()
         self.logger.info(f"🔹 回測結束 | 版本: v4.1 | stock_id: {self.params.stock_id} | Entry Period: {self.params.entry_period}, Exit Period: {self.params.exit_period}")
         self.logger.info(f"🔹 最終資產價值: {final_value:.2f} | 總手續費支出: {total_commission:.2f}")
