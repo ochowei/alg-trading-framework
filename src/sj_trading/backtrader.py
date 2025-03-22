@@ -38,7 +38,7 @@ def run_optimization_once(df:pd.DataFrame ,ticker:str, strategy:bt.Strategy, pri
     cerebro.optstrategy(
         TurtleStrategy_v4_1,
         stock_id=ticker,
-        start_date=datetime(2023,3,20),
+        start_date=datetime(2023,1,1),
         entry_period=range(10, 50, 10),  # 測試 10, 20, 30, 40, 50 天突破
         exit_period=range(10, 41, 5)      # 測試 5, 10, 15, 20 天回撤
     )
@@ -139,25 +139,27 @@ def run_optimization():
     ticker_list_2 = ['0050.TW', '2330.TW', '00737.TW', '00635U.TW'] # 第二關注目標
     tickers = SinopacData.list_tickers(dataframe)
     logger = init_logger()
-    target_list = ticker_list_1
+    target_list = tickers
     
     # read json from ./data/ETF.json with utf-8           
     # print(f"目標清單: {target_list}")
     num_transactions = 5
+    errors = []
     for ticker in target_list:
         print(f"開始優化 {ticker} 的策略參數")
-        best_result = run_optimization_once(dataframe, ticker, TurtleStrategy_v4_1, False, 5)
+        best_result = None
+        try:
+            best_result = run_optimization_once(dataframe, ticker, TurtleStrategy_v4_1, False, num_transactions)
+        except Exception as e:
+            print(f"⚠️ 優化 {ticker} 時發生錯誤: {e}")
+            logger.error(f"⚠️ 優化 {ticker} 時發生錯誤: {e}")
+            errors.append({"ticker": ticker, "error": str(e)})
+            continue
         if best_result is not None and best_result['sharpe'] != -float('inf'):
             annual_return = best_result["strat"].analyzers.returns.get_analysis().get("rnorm", None)
-            print("\n=== 最佳策略 (根據 Sharpe Ratio) ===")
-            print(f"Entry Period: {best_result["params"].entry_period}")
-            print(f"Exit Period: {best_result["params"].exit_period}")
-            print(f"Sharpe Ratio: {best_result['sharpe']:.3f}")
-            print(f"Max Drawdown: {best_result['max_drawdown']:.2f}%")
-            print(f"Win Rate: {best_result['win_rate']:.2%}")
-            print(f"Profit Factor: {best_result['profit_factor']:.2f}")     
-            print(f"Cumulative Return: {best_result['cumulative_return']:.2%}") 
-            print(f"Annual Return: {annual_return:.2%}")
+            sharpe = best_result["sharpe"]
+            if (annual_return < 0 or sharpe < 0.1):
+                continue        
             
             strat = best_result["strat"]
             transactions = strat.analyzers.transactions.get_analysis()
@@ -177,10 +179,27 @@ def run_optimization():
                     df_trades.append(d)
             
             df_trades = pd.DataFrame(df_trades)
-            print(f"\n=== 最後 {x} 筆交易 ===")
-            print(df_trades)
+          
+            if (df_trades['date'].max() > "2025-03-01"):     
+                print(f"\n=== 最後 {x} 筆交易 ===")
+                print(df_trades)       
+                print("\n=== 最佳策略 (根據 Sharpe Ratio) ===")
+                print(f"Entry Period: {best_result["params"].entry_period}")
+                print(f"Exit Period: {best_result["params"].exit_period}")
+                print(f"Sharpe Ratio: {sharpe:.3f}")
+                print(f"Max Drawdown: {best_result['max_drawdown']:.2f}%")
+                print(f"Win Rate: {best_result['win_rate']:.2%}")
+                print(f"Profit Factor: {best_result['profit_factor']:.2f}")     
+                print(f"Cumulative Return: {best_result['cumulative_return']:.2%}") 
+                print(f"Annual Return: {annual_return:.2%}")
 
         print(f"結束優化 {ticker} 的策略參數")
+
+    if len(errors) > 0:
+        print("\n=== 錯誤清單 ===")
+        for error in errors:
+            print(f"股票代號: {error['ticker']}, 錯誤: {error['error']}")
+    print("🎉 優化完成！")
        
 
 def download_data():
