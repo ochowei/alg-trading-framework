@@ -134,7 +134,8 @@ def run_optimization_once(df:pd.DataFrame ,ticker:str, strategy:bt.Strategy, pri
 def print_backtest_result(bt_result, num_transactions: int):
     strat = bt_result["strat"]
     transactions = strat.analyzers.transactions.get_analysis()
-
+    stock_id = strat.params.stock_id
+    logger = init_logger(f"{stock_id}_tutle_strategy.log")
     # 轉換交易紀錄為 DataFrame
     df_trades = []
     # print last x trades
@@ -153,22 +154,31 @@ def print_backtest_result(bt_result, num_transactions: int):
 
     annual_return = bt_result["strat"].analyzers.returns.get_analysis().get("rnorm", None)
     sharpe = bt_result["sharpe"]
-    print(f"\n=== 最後 {num_transactions} 筆交易 ===")
-    print(df_trades)       
-    print(f"Entry Period: {bt_result["params"].entry_period}")
-    print(f"Exit Period: {bt_result["params"].exit_period}")
-    print(f"Sharpe Ratio: {sharpe:.3f}")
-    print(f"Max Drawdown: {bt_result['max_drawdown']:.2f}%")
-    print(f"Win Rate: {bt_result['win_rate']:.2%}")
-    print(f"Profit Factor: {bt_result['profit_factor']:.2f}")     
-    print(f"Cumulative Return: {bt_result['cumulative_return']:.2%}") 
-    print(f"Annual Return: {annual_return:.2%}")
+    # print(f"\n=== 最後 {num_transactions} 筆交易 ===")
+    # print(df_trades)       
+    # print(f"Entry Period: {bt_result["params"].entry_period}")
+    # print(f"Exit Period: {bt_result["params"].exit_period}")
+    # print(f"Sharpe Ratio: {sharpe:.3f}")
+    # print(f"Max Drawdown: {bt_result['max_drawdown']:.2f}%")
+    # print(f"Win Rate: {bt_result['win_rate']:.2%}")
+    # print(f"Profit Factor: {bt_result['profit_factor']:.2f}")     
+    # print(f"Cumulative Return: {bt_result['cumulative_return']:.2%}") 
+    # print(f"Annual Return: {annual_return:.2%}") 
+    logger.info(f"Entry Period: {bt_result['params'].entry_period}")
+    logger.info(f"Exit Period: {bt_result['params'].exit_period}")
+    logger.info(f"Sharpe Ratio: {sharpe:.3f}")
+    logger.info(f"Max Drawdown: {bt_result['max_drawdown']:.2f}%")
+    logger.info(f"Win Rate: {bt_result['win_rate']:.2%}")
+    logger.info(f"Profit Factor: {bt_result['profit_factor']:.2f}")
+    logger.info(f"Cumulative Return: {bt_result['cumulative_return']:.2%}")
+    logger.info(f"Annual Return: {annual_return:.2%}")
+
 
 def run_optimization():
     dataframe =  Dataloader.read_csv()
 
-    # tutle 4.1 trace list: 0050.TW, 2330.TW, 00757, 00635U.TW    
-    ticker_list_1 = ['00757.TW'] # 第一關注目標
+    # tutle 4.1 trace list: 0050.TW, 2330.TW, 00757, 00635U.TW   00893  
+    ticker_list_1 = ['00893.TW'] # 第一關注目標
     ticker_list_2 = ['0050.TW', '2330.TW', '00737.TW', '00635U.TW'] # 第二關注目標
     tickers = Dataloader.list_tickers(dataframe)
     logger = init_logger("backtrader.log")
@@ -196,23 +206,13 @@ def run_optimization():
             if (annual_return < 0 or sharpe < 0.1):
                 continue          
             df_trades = []
-    # print last x trades
-            strat = best_result["strat"]
-            transactions = strat.analyzers.transactions.get_analysis()
-
-            for date, trades in list(transactions.items())[-num_transactions:]:
-                for trade in trades:
-                    d = {
-                        "date": f"{date}",
-                        "size": trade[0],
-                        "price": trade[1],
-                        "total": trade[4]
-                    }
-                    df_trades.append(d)     
+        # print last x trades
+            strat = best_result["strat"]                 
                     
-            df_trades = pd.DataFrame(df_trades)
-          
-            if (df_trades['date'].max() > "2025-03-01"):
+            df_trades = pd.DataFrame(strat.signal_list)
+            max_trade_date = df_trades['date'].max()
+            #check if max_trade_date is greater than 2025-03-22
+            if (df_trades['size'].iloc[-1]>0 and max_trade_date > '2025-03-22'):
                 print("\n=== 最佳策略 (根據 Sharpe Ratio) ===")
                 watch_list.append({"ticker": ticker, "bt_result": best_result})
 

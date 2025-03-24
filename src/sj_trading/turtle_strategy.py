@@ -299,7 +299,7 @@ class TurtleStrategy_v4_1(bt.Strategy):
         log_filename = f"{stock_id}_tutle_strategy.log"
         self.logger = init_logger(log_filename)
         # log start and params
-        self.logger.info(f"🔹 回測開始 | 版本: v4.1 | stock_id: {stock_id} | Entry Period: {self.params.entry_period}, Exit Period: {self.params.exit_period}")
+        self.logger.debug(f"🔹 回測開始 | 版本: v4.1 | stock_id: {stock_id} | Entry Period: {self.params.entry_period}, Exit Period: {self.params.exit_period}")
         
         
         self.entry_high = bt.indicators.Highest(self.data.high(-1), period=self.params.entry_period)
@@ -313,6 +313,7 @@ class TurtleStrategy_v4_1(bt.Strategy):
         
         self.last_trade_date = None
         self.total_commission = 0
+        self.signal_list = []
     
     def next(self):
         trade_date = self.datas[0].datetime.date(0)
@@ -325,7 +326,7 @@ class TurtleStrategy_v4_1(bt.Strategy):
         
         # 🚀 **過濾：跳過指定日期**
         if trade_date in [d.date() for d in self.params.skip_dates]:
-            self.logger.info(f"❌ {trade_date} - 設定為不交易日，跳過")
+            self.logger.debug(f"❌ {trade_date} - 設定為不交易日，跳過")
             return  # 不交易，直接返回
 
         if self.last_trade_date == trade_date:
@@ -342,12 +343,22 @@ class TurtleStrategy_v4_1(bt.Strategy):
         
         size = int(size)
         if  self.adx[0] > 20 and self.boll_width[0] > self.atr[0] and price > self.entry_high[0]:
-            self.logger.info(f"💡 {trade_date} | 嘗試買入 {self.params.stock_id} @ {price:.2f} | Size: {size}")
-            self.buy(size=size)
+            self.logger.debug(f"💡 {trade_date} | 嘗試買入 {self.params.stock_id} @ {price:.2f} | Size: {size}")
+            self.signal_list.append({ "date": f"{trade_date}",
+                        "size": size,
+                        "price": price,
+                        "total": -size * price,})
+            if not self.position:
+                self.buy(size=size)
             self.last_trade_date = trade_date
         elif self.position and price < self.exit_low[0]:
-            self.logger.info(f"💡 {trade_date} | 嘗試賣出 {self.params.stock_id} @ {price:.2f}")
-            self.close()
+            self.logger.debug(f"💡 {trade_date} | 嘗試賣出 {self.params.stock_id} @ {price:.2f}")
+            self.signal_list.append({ "date": f"{trade_date}",
+                        "size": -size,
+                        "price": price,
+                        "total": size * price
+                        })
+            self.close()            
             self.last_trade_date = trade_date
     
     def notify_order(self, order):
@@ -362,11 +373,11 @@ class TurtleStrategy_v4_1(bt.Strategy):
             cost = order.executed.value
             commission = order.executed.comm
             self.total_commission += commission
-            self.logger.info(f"✅ {trade_date} | {action} @ {price:.2f} | Size: {size}")
-            self.logger.info(f"➡ 交易金額: {cost:.2f} | 現金餘額: {cash_remain:.2f} | 總資產: {portfolio_value:.2f} | 交易成本: {commission:.2f}")
+            self.logger.debug(f"✅ {trade_date} | {action} @ {price:.2f} | Size: {size}")
+            self.logger.debug(f"➡ 交易金額: {cost:.2f} | 現金餘額: {cash_remain:.2f} | 總資產: {portfolio_value:.2f} | 交易成本: {commission:.2f}")
     
     def stop(self):
         total_commission = self.total_commission
         final_value = self.broker.getvalue()
-        self.logger.info(f"🔹 回測結束 | 版本: v4.1 | stock_id: {self.params.stock_id} | Entry Period: {self.params.entry_period}, Exit Period: {self.params.exit_period}")
-        self.logger.info(f"🔹 最終資產價值: {final_value:.2f} | 總手續費支出: {total_commission:.2f}")
+        self.logger.debug(f"🔹 回測結束 | 版本: v4.1 | stock_id: {self.params.stock_id} | Entry Period: {self.params.entry_period}, Exit Period: {self.params.exit_period}")
+        self.logger.debug(f"🔹 最終資產價值: {final_value:.2f} | 總手續費支出: {total_commission:.2f}")
