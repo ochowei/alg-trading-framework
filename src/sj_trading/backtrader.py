@@ -109,7 +109,7 @@ def run_optimization_once(df:pd.DataFrame, ticker:str, strategy:bt.Strategy, pri
 
         entry_period = strat.params.entry_period
         exit_period = strat.params.exit_period
-        logger = init_logger(f"{ticker}_tutle_strategy_{entry_period}_{exit_period}.log", mode='a')            
+        logger = init_logger(f"{ticker}/tutle_strategy_{entry_period}_{exit_period}.log", mode='a')            
             
         logger.debug(f"Sharpe Ratio: {sharpe:.3f}" if sharpe else "Sharpe Ratio: 無法計算")
             
@@ -154,7 +154,7 @@ def print_backtest_result(bt_result, num_transactions: int, level=logging.INFO):
     strat = bt_result["strat"]
     transactions = strat.analyzers.transactions.get_analysis()
     stock_id = strat.params.stock_id
-    logger = init_logger(f"{stock_id}_tutle_strategy.log")
+    logger = init_logger(f"{stock_id}/tutle_strategy.log")
     # 轉換交易紀錄為 DataFrame
     df_trades = []
     # print last x trades
@@ -201,9 +201,7 @@ def run_optimization():
     ticker_list_2 = ['0050.TW', '2330.TW', '00737.TW', '00635U.TW'] # 第二關注目標
     tickers = Dataloader.list_tickers(dataframe)
     logger = init_logger("backtrader.log")
-    target_list = tickers
-    for ticker in target_list:
-        init_logger(f"{ticker}_tutle_strategy.log")
+    target_list = tickers  
 
     # read json from ./data/ETF.json with utf-8           
     # print(f"目標清單: {target_list}")
@@ -240,7 +238,6 @@ def run_optimization():
             max_trade_date = df_trades['date'].max()
             #check if max_trade_date is greater than 2025-03-22
             if (df_trades['size'].iloc[-1]>=0 and max_trade_date > '2025-03-18'):
-                print("\n=== 最佳策略 (根據 Sharpe Ratio) ===")
                 watch_list.append({"ticker": ticker, "bt_result": best_result})
 
         print(f"結束優化 {ticker} 的策略參數")

@@ -298,7 +298,7 @@ class TurtleStrategy_v4_1(bt.Strategy):
         stock_id = self.params.stock_id
         entry_period = self.params.entry_period
         exit_period = self.params.exit_period
-        log_filename = f"{stock_id}_tutle_strategy_{entry_period}_{exit_period}.log"
+        log_filename = f"{stock_id}/tutle_strategy_{entry_period}_{exit_period}.log"
         self.logger = init_logger(log_filename)
         # log start and params
         self.logger.debug(f"🔹 回測開始 | 版本: v4.1 | stock_id: {stock_id} | Entry Period: {self.params.entry_period}, Exit Period: {self.params.exit_period}")
