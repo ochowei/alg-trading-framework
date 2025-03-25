@@ -296,7 +296,9 @@ class TurtleStrategy_v4_1(bt.Strategy):
     
     def __init__(self):
         stock_id = self.params.stock_id
-        log_filename = f"{stock_id}_tutle_strategy.log"
+        entry_period = self.params.entry_period
+        exit_period = self.params.exit_period
+        log_filename = f"{stock_id}_tutle_strategy_{entry_period}_{exit_period}.log"
         self.logger = init_logger(log_filename)
         # log start and params
         self.logger.debug(f"🔹 回測開始 | 版本: v4.1 | stock_id: {stock_id} | Entry Period: {self.params.entry_period}, Exit Period: {self.params.exit_period}")
@@ -348,7 +350,7 @@ class TurtleStrategy_v4_1(bt.Strategy):
                         "size": size,
                         "price": price,
                         "total": -size * price,})
-            if not self.position:
+            if not self.position or True:
                 self.buy(size=size)
             self.last_trade_date = trade_date
         elif self.position and price < self.exit_low[0]:
@@ -374,7 +376,8 @@ class TurtleStrategy_v4_1(bt.Strategy):
             commission = order.executed.comm
             self.total_commission += commission
             self.logger.debug(f"✅ {trade_date} | {action} @ {price:.2f} | Size: {size}")
-            self.logger.debug(f"➡ 交易金額: {cost:.2f} | 現金餘額: {cash_remain:.2f} | 總資產: {portfolio_value:.2f} | 交易成本: {commission:.2f}")
+            action = "⬅" if size < 0 else "➡" 
+            self.logger.debug(f"{action} 交易金額: {cost:.2f} | 現金餘額: {cash_remain:.2f} | 總資產: {portfolio_value:.2f} | 交易成本: {commission:.2f}")
     
     def stop(self):
         total_commission = self.total_commission

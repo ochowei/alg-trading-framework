@@ -1,7 +1,7 @@
 import logging
 
 
-def init_logger(filename):
+def init_logger(filename, mode='w'):
     logger = logging.getLogger(filename)
     logger.setLevel(logging.DEBUG)
 
@@ -16,7 +16,7 @@ def init_logger(filename):
         logger.addHandler(console_handler)
 
         # ✅ 設定 file handler（確保 log 不會被重複寫入）
-        file_handler = logging.FileHandler(f'log/{filename}', mode='w', encoding="utf-8")
+        file_handler = logging.FileHandler(f'log/{filename}', mode=mode, encoding="utf-8")
         file_handler.setLevel(logging.DEBUG)
         file_handler.setFormatter(formatter)
         logger.addHandler(file_handler)
