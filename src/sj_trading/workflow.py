@@ -11,13 +11,18 @@ from .logger import init_logger
 import json
 import numpy as np
 import logging
+from datetime import datetime, timedelta
+
+five_days_ago_str = (datetime.now() - timedelta(days=5)).strftime('%Y-%m-%d')
+one_week_later = (datetime.now() + timedelta(days=7))
+one_k_days_ago = (datetime.now() - timedelta(days=1000))
 
 # 參數優化
 def run_optimization_once(df:pd.DataFrame, ticker:str, strategy:bt.Strategy, print_strat:bool=False, num_transactions:int=5, performance_target:str="sharpe"):
     cerebro = bt.Cerebro(optreturn=False)
     # trace list: 0050, 2330, 0052, 元大全球 AI（00762）, 00737(國泰全球 AI), 00757(統一 FANG+ ETF)* 00635U.TW(期元大S&P黃金)*
     # 下載並載入數據
-    data_1 = Dataloader.from_csv_df(df=df, symbol=ticker, start='2022-11-01', end='2025-12-31')
+    data_1 = Dataloader.from_csv_df(df=df, symbol=ticker, start=one_k_days_ago.strftime('%Y-%m-%d'), end=one_week_later.strftime('%Y-%m-%d'))
     # stock = yf.Ticker(ticker)
     # check if data_1 is Less than 1
     if data_1 is None:
@@ -40,7 +45,7 @@ def run_optimization_once(df:pd.DataFrame, ticker:str, strategy:bt.Strategy, pri
     cerebro.optstrategy(
         TurtleStrategy_v4_1,
         stock_id=ticker,
-        start_date=datetime(2000,1,1),
+        start_date=one_k_days_ago,
         entry_period=range(10, 50, 10),  # 測試 10, 20, 30, 40, 50 天突破
         exit_period=range(10, 41, 5)      # 測試 5, 10, 15, 20 天回撤
     )
@@ -150,11 +155,11 @@ def run_optimization_once(df:pd.DataFrame, ticker:str, strategy:bt.Strategy, pri
     
     # cerebro.plot()
 
-def print_backtest_result(bt_result, num_transactions: int, level=logging.INFO):
+def print_backtest_result(bt_result, num_transactions: int, level=logging.INFO, filename="backtrader.log"):
     strat = bt_result["strat"]
     transactions = strat.analyzers.transactions.get_analysis()
     stock_id = strat.params.stock_id
-    logger = init_logger(f"{stock_id}/tutle_strategy.log")
+    logger = init_logger(filename)
     # 轉換交易紀錄為 DataFrame
     df_trades = []
     # print last x trades
@@ -182,7 +187,10 @@ def print_backtest_result(bt_result, num_transactions: int, level=logging.INFO):
     # print(f"Win Rate: {bt_result['win_rate']:.2%}")
     # print(f"Profit Factor: {bt_result['profit_factor']:.2f}")     
     # print(f"Cumulative Return: {bt_result['cumulative_return']:.2%}") 
-    # print(f"Annual Return: {annual_return:.2%}") 
+    # print(f"Annual Return: {annual_return:.2%}")
+    #     
+    logger.log(level,f"==========================")
+    logger.log(level,f"Stock ID: {stock_id}")
     logger.log(level,f"Entry Period: {bt_result['params'].entry_period}")
     logger.log(level,f"Exit Period: {bt_result['params'].exit_period}")
     logger.log(level,f"Sharpe Ratio: {sharpe:.3f}")
@@ -193,7 +201,7 @@ def print_backtest_result(bt_result, num_transactions: int, level=logging.INFO):
     logger.log(level,f"Annual Return: {annual_return:.2%}")
 
 
-def run_optimization():
+def lookup_target():
     dataframe =  Dataloader.read_csv()
 
     # tutle 4.1 trace list: 0050.TW, 2330.TW, 00757, 00635U.TW, 00893.TW, 00895.TW
@@ -225,7 +233,7 @@ def run_optimization():
             if (annual_return < 0 ):
                 continue
 
-            print_backtest_result(level=logging.DEBUG, bt_result=best_result, num_transactions=5)
+            print_backtest_result(level=logging.DEBUG, bt_result=best_result, num_transactions=5, filename=f"{ticker}/tutle_strategy.log")
 
             if sharpe < 0.1:
                 continue
@@ -237,7 +245,7 @@ def run_optimization():
             df_trades = pd.DataFrame(strat.signal_list)
             max_trade_date = df_trades['date'].max()
             #check if max_trade_date is greater than 2025-03-22
-            if (df_trades['size'].iloc[-1]>=0 and max_trade_date > '2025-03-18'):
+            if ( df_trades['size'].iloc[-1]>=0 and max_trade_date > five_days_ago_str):
                 watch_list.append({"ticker": ticker, "bt_result": best_result})
 
         print(f"結束優化 {ticker} 的策略參數")
@@ -248,7 +256,6 @@ def run_optimization():
             print(f"股票代號: {error['ticker']}, 錯誤: {error['error']}")
     print("🎉 優化完成！")
     for x in watch_list:
-        print(f"\n\nCode: {x["ticker"]}")
         print_backtest_result(level=logging.INFO, bt_result=x["bt_result"], num_transactions=5)
 
 
@@ -268,7 +275,7 @@ def download_data():
     data = yf.download(
         tickers=etf_codes,
         start="1998-01-01",
-        end="2025-12-31",
+        end=one_week_later.strftime('%Y-%m-%d'),
         group_by='ticker',   # 會以股票代碼作為 key 分群
         auto_adjust=True,     # 自動調整股價（考慮除權息等）
         progress=True
