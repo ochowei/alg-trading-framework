@@ -9,6 +9,7 @@
 - 使用最近 1000 天的資料來回測
 - 並根據回測最佳年化回報率的策略，來判斷是否要進場
 - WAIT [[tag/question]] 是否可以知道資金佔用的時間
+GH-1
 - NOW [[tag/implement]] 持股時間的計算 [[roadmap/workflow-1.0]]
 
 - 輔以人工判斷
