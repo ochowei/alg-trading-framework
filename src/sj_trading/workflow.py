@@ -204,6 +204,65 @@ class TaiwanStockCommission(bt.CommInfoBase):
             commission += cost * 0.003  # 0.3% 交易稅
         return commission
 
+
+class HoldingPeriodAnalyzer(bt.Analyzer):
+    """
+    分析每筆交易的持倉時間（同時計算 bar 數 與 天數）
+
+    回傳：
+        - average_bars：平均持倉 bar 數
+        - max_bars：最大持倉 bar 數
+        - min_bars：最小持倉 bar 數
+        - average_days：平均持倉天數
+        - max_days：最大持倉天數
+        - min_days：最小持倉天數
+        - count：交易筆數
+        - holding_bars：所有持倉 bar 數清單
+        - holding_days：所有持倉天數清單
+    """
+    def __init__(self):
+        self.holding_bars = []
+        self.holding_days = []
+
+    def notify_trade(self, trade):
+        if trade.isclosed:
+            # 持有 bar 數
+            bars_held = trade.barclose - trade.baropen
+            self.holding_bars.append(bars_held)
+
+            # 持有天數
+            entry_date = bt.num2date(trade.dtopen).date()
+            exit_date = bt.num2date(trade.dtclose).date()
+            days_held = (exit_date - entry_date).days
+            self.holding_days.append(days_held)
+
+    def get_analysis(self):
+        count = len(self.holding_bars)
+        if count == 0:
+            return {
+                'average_bars': 0,
+                'max_bars': 0,
+                'min_bars': 0,
+                'average_days': 0,
+                'max_days': 0,
+                'min_days': 0,
+                'count': 0,
+                'holding_bars': [],
+                'holding_days': []
+            }
+        return {
+            'average_bars': sum(self.holding_bars) / count,
+            'max_bars': max(self.holding_bars),
+            'min_bars': min(self.holding_bars),
+            'average_days': sum(self.holding_days) / count,
+            'max_days': max(self.holding_days),
+            'min_days': min(self.holding_days),
+            'count': count,
+            'holding_bars': self.holding_bars,
+            'holding_days': self.holding_days
+        }
+
+
 # 參數優化
 def run_optimization_once(df:pd.DataFrame, ticker:str, strategy:bt.Strategy, print_strat:bool=False, num_transactions:int=5, performance_target:str=performance_target):
     cerebro = bt.Cerebro(optreturn=False)
@@ -243,6 +302,7 @@ def run_optimization_once(df:pd.DataFrame, ticker:str, strategy:bt.Strategy, pri
     cerebro.addanalyzer(bt.analyzers.TradeAnalyzer, _name='trade')
     cerebro.addanalyzer(bt.analyzers.Returns, _name='returns')  # 加入報酬率分析器
     cerebro.addanalyzer(bt.analyzers.Transactions, _name='transactions')
+    cerebro.addanalyzer(HoldingPeriodAnalyzer, _name='holdings')
     # cerebro.addstrategy(TurtleStrategy_v1_1_1)
     optimized_results = cerebro.run(maxcpus=1)
     # print('Ending Portfolio Value: %.2f' % cerebro.broker.getvalue())
@@ -272,7 +332,7 @@ def run_optimization_once(df:pd.DataFrame, ticker:str, strategy:bt.Strategy, pri
         total_trades = trade_analysis.get('total', {}).get('total', 0)
         won_trades = trade_analysis.get('won', {}).get('total', 0)
         annual_return = strat.analyzers.returns.get_analysis().get("rnorm", None)
-
+        holding_stats = strat.analyzers.holdings.get_analysis()
         # 計算 Profit Factor
         profit_factor = (won_pnl / lost_pnl) if lost_pnl != 0 else float('inf')
 
@@ -314,6 +374,10 @@ def run_optimization_once(df:pd.DataFrame, ticker:str, strategy:bt.Strategy, pri
         logger.debug(f"Cumulative Return: {cumulative_return:.2%}" if cumulative_return is not None else "Cumulative Return: 無法計算")
 
         logger.debug(f"Annual Return: {annual_return:.2%}" if annual_return is not None else "Annual Return: 無法計算")
+
+        logger.debug(f"交易筆數：{holding_stats['count']}")
+        logger.debug(f"平均持有時間：{holding_stats['average_bars']:.2f} bars, {holding_stats['average_days']:.2f} 天")
+        logger.debug(f"總共持有時間：{holding_stats['max_bars'] * holding_stats['count']}  天")
         
         compare_target = performance[performance_target]
         # 確保 Sharpe Ratio 有效
@@ -386,7 +450,6 @@ def print_backtest_result(bt_result, num_transactions: int, level=logging.INFO, 
     logger.log(level,f"Profit Factor: {bt_result['profit_factor']:.2f}")
     logger.log(level,f"Cumulative Return: {bt_result['cumulative_return']:.2%}")
     logger.log(level,f"Annual Return: {annual_return:.2%}")
-
 
 def init_logger(filename, mode='w'):
     logger = logging.getLogger(filename)
@@ -467,6 +530,7 @@ def lookup_target():
     print("🎉 優化完成！")
     for x in watch_list:
         print_backtest_result(level=logging.INFO, bt_result=x["bt_result"], num_transactions=5)
+
 
 def download_data():
     etf_codes = []
