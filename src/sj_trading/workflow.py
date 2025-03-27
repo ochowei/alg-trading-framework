@@ -16,9 +16,9 @@ from datetime import datetime, timedelta
 five_days_ago_str = (datetime.now() - timedelta(days=5)).strftime('%Y-%m-%d')
 one_week_later = (datetime.now() + timedelta(days=7))
 one_k_days_ago = (datetime.now() - timedelta(days=1000))
-
+performance_target = "sharpe"
 # 參數優化
-def run_optimization_once(df:pd.DataFrame, ticker:str, strategy:bt.Strategy, print_strat:bool=False, num_transactions:int=5, performance_target:str="sharpe"):
+def run_optimization_once(df:pd.DataFrame, ticker:str, strategy:bt.Strategy, print_strat:bool=False, num_transactions:int=5, performance_target:str=performance_target):
     cerebro = bt.Cerebro(optreturn=False)
     # trace list: 0050, 2330, 0052, 元大全球 AI（00762）, 00737(國泰全球 AI), 00757(統一 FANG+ ETF)* 00635U.TW(期元大S&P黃金)*
     # 下載並載入數據
@@ -259,6 +259,7 @@ def lookup_target():
         print_backtest_result(level=logging.INFO, bt_result=x["bt_result"], num_transactions=5)
 
 
+# TODO
 def download_data():
     etf_codes = []
 
