@@ -3,20 +3,207 @@ import shioaji as sj
 import pandas as pd
 import os
 from datetime import datetime
-from .turtle_strategy import (TurtleStrategy_v1_1, TurtleStrategy_v4_1,TurtleStrategy_v4_0, TurtleStrategy_v1_1_1)
-from .taiwan_stock_commission import TaiwanStockCommission
-from .dataloader import Dataloader
 import yfinance as yf
-from .logger import init_logger
 import json
 import numpy as np
 import logging
 from datetime import datetime, timedelta
+from pathlib import Path
 
 five_days_ago_str = (datetime.now() - timedelta(days=5)).strftime('%Y-%m-%d')
 one_week_later = (datetime.now() + timedelta(days=7))
 one_k_days_ago = (datetime.now() - timedelta(days=1000))
 performance_target = "sharpe"
+
+class Dataloader(bt.feeds.PandasData):
+    """ 自定義 Backtrader 數據源，格式化永豐 API 和 yfinance 的數據 """
+    params = (
+        ('datetime', None),
+        ('open', -1),
+        ('high', -1),
+        ('low', -1),
+        ('close', -1),
+        ('volume', -1),
+        ('openinterest', -1),
+    )
+    
+    @classmethod
+    def from_yfinance(cls, symbol, start, end):
+        """ 從 yfinance 下載歷史數據，並轉換為 Backtrader 可用格式 """
+        df = yf.download(symbol, start=start, end=end)
+
+       # 移除多餘的 "Ticker" 行，僅保留數據
+        df.columns = df.columns.droplevel(1)  # 移除第二層標題 (Ticker)
+
+        # 重新命名欄位，使其符合 Backtrader 的格式
+        df = df.rename(columns={'Open': 'open', 'High': 'high', 'Low': 'low', 'Close': 'close', 'Volume': 'volume'})
+        # df.index = df.index.tz_localize('America/New_York').tz_convert('Asia/Taipei')
+
+        # 確保索引為日期格式
+        df.index = pd.to_datetime(df.index)
+        all_data = bt.feeds.PandasData(dataname=df)
+
+        # 確保回傳時 dataname 傳入的是 DataFrame
+        return all_data
+
+    @classmethod
+    def read_csv(self):
+        df = pd.read_csv("combined_stock_data.csv")                
+        return df
+    
+    @classmethod
+    def list_tickers(self, df):
+        tickers = df['Ticker'].unique()
+        return tickers
+
+    @classmethod
+    def from_csv_df(self, df, symbol, start, end):
+
+        df_bd = df[df['Ticker'] == symbol]
+        r_df = df_bd[(df_bd['Date'] >= start) & (df_bd['Date'] <= end)].copy()
+        r_df['Date'] = pd.to_datetime(r_df['Date'])
+        r_df = r_df.rename(columns={'Open': 'open', 'High': 'high', 'Low': 'low', 'Close': 'close', 'Volume': 'volume'})
+        r_df = r_df[['Date', 'open', 'high', 'low', 'close', 'volume']]
+        r_df.set_index('Date', inplace=True)
+        r_df.dropna(inplace=True)
+        if r_df.empty:
+            print(f"⚠️ {symbol} 在 {start} 至 {end} 之間沒有數據")
+            return None
+        all_data = bt.feeds.PandasData(dataname=r_df)
+        # 確保回傳時 dataname 傳入的是 DataFrame
+        return all_data
+
+class Strategy:
+    class Turtle_v4_1(bt.Strategy):
+        """
+    海龜交易策略（改進版 v4.1）
+    ✅ 使用 ADX 過濾盤整市場（ADX > 20）
+    ✅ 使用布林通道過濾低波動市場（布林通道寬度 > ATR）
+    ✅ **避免當沖**（確保持倉至少一天）
+    ✅ **新增日誌記錄**
+    ✅ **新增交易範圍控制 (`start_date`, `skip_dates`)**
+    ✅ **新增最大倉位限制（最多 90% 資金進場）**
+    """
+
+        params = (
+            ("entry_period", 20), 
+            ("exit_period", 10), 
+            ("stock_id", "0050.TW"),  # 股票代號
+            ("risk", 0.02),
+            ("start_date", datetime(2025, 1, 1)),  # 只在這個日期之後交易
+            ("skip_dates", []),  # 這些日期不交易
+        )
+
+        def __init__(self):
+            stock_id = self.params.stock_id
+            entry_period = self.params.entry_period
+            exit_period = self.params.exit_period
+            log_filename = f"{stock_id}/tutle_strategy_{entry_period}_{exit_period}.log"
+            self.logger = init_logger(log_filename)
+            # log start and params
+            self.logger.debug(f"🔹 回測開始 | 版本: v4.1 | stock_id: {stock_id} | Entry Period: {self.params.entry_period}, Exit Period: {self.params.exit_period}")
+            
+            
+            self.entry_high = bt.indicators.Highest(self.data.high(-1), period=self.params.entry_period)
+            self.exit_low = bt.indicators.Lowest(self.data.low(-1), period=self.params.exit_period)
+            
+            self.adx = bt.indicators.ADX(period=14)
+            self.boll = bt.indicators.BollingerBands(period=20)
+            self.boll_width = self.boll.lines.top - self.boll.lines.bot
+            
+            self.atr = bt.indicators.ATR(self.data, period=14)
+            
+            self.last_trade_date = None
+            self.total_commission = 0
+            self.signal_list = []
+
+        def next(self):
+            trade_date = self.datas[0].datetime.date(0)
+            price = self.data.close[0]
+            portfolio_value = self.broker.getvalue()
+
+            # 🚀 **過濾：只在 start_date 之後交易**
+            if trade_date < self.params.start_date.date():
+                return  # 忽略早於 start_date 的訊號
+            
+            # 🚀 **過濾：跳過指定日期**
+            if trade_date in [d.date() for d in self.params.skip_dates]:
+                self.logger.debug(f"❌ {trade_date} - 設定為不交易日，跳過")
+                return  # 不交易，直接返回
+
+            if self.last_trade_date == trade_date:
+                return  # 避免當沖
+            
+            cash = self.broker.get_cash()
+            atr_risk = self.atr[0] * 2
+            size = (cash * 1 * self.params.risk) / atr_risk
+            
+            required_cash = size * price
+            max_position_value = cash * 0.9
+            if required_cash > max_position_value:
+                size = max_position_value / price  # 調整 size 以符合最大倉位限制
+            
+            size = int(size)
+            if  self.adx[0] > 20 and self.boll_width[0] > self.atr[0] and price > self.entry_high[0]:
+                self.logger.debug(f"💡 {trade_date} | 嘗試買入 {self.params.stock_id} @ {price:.2f} | Size: {size}")
+                self.signal_list.append({ "date": f"{trade_date}",
+                            "size": size,
+                            "price": price,
+                            "total": -size * price,})
+                if not self.position or True:
+                    self.buy(size=size)
+                self.last_trade_date = trade_date
+            elif price < self.exit_low[0]:
+                self.logger.debug(f"💡 {trade_date} | 嘗試賣出 {self.params.stock_id} @ {price:.2f}")
+                if self.position:
+                    self.signal_list.append({ "date": f"{trade_date}",
+                                "size": -size,
+                                "price": price,
+                                "total": size * price
+                                })
+                    self.close()            
+                self.last_trade_date = trade_date
+
+        def notify_order(self, order):
+            trade_date = self.datas[0].datetime.date(0)
+            action = "買進" if order.isbuy() else "賣出"
+            cash_remain = self.broker.get_cash()
+            portfolio_value = self.broker.getvalue()
+            price = order.executed.price if order.executed else 0
+            size = order.executed.size if order.executed else 0
+            
+            if order.status in [order.Completed]:
+                cost = order.executed.value
+                commission = order.executed.comm
+                self.total_commission += commission
+                self.logger.debug(f"✅ {trade_date} | {action} @ {price:.2f} | Size: {size}")
+                action = "⬅" if size < 0 else "➡" 
+                self.logger.debug(f"{action} 交易金額: {cost:.2f} | 現金餘額: {cash_remain:.2f} | 總資產: {portfolio_value:.2f} | 交易成本: {commission:.2f}")
+
+        def stop(self):
+            total_commission = self.total_commission
+            final_value = self.broker.getvalue()
+            self.logger.debug(f"🔹 回測結束 | 版本: v4.1 | stock_id: {self.params.stock_id} | Entry Period: {self.params.entry_period}, Exit Period: {self.params.exit_period}")
+            self.logger.debug(f"🔹 最終資產價值: {final_value:.2f} | 總手續費支出: {total_commission:.2f}")
+
+class TaiwanStockCommission(bt.CommInfoBase):
+    """
+    台股交易成本：
+    - 買入：收 0.1% 手續費
+    - 賣出：收 0.1% 手續費 + 0.3% 交易稅
+    """
+    params = (
+        ("commission", 0.001),  # 手續費 0.1%
+        ("stocklike", True),  # 股票類資產
+    )
+
+    def _getcommission(self, size, price, pseudoexec):
+        cost = abs(size) * price  # 交易金額
+        commission = cost * self.p.commission  # 計算手續費
+        if size < 0:  # 只有賣出時收交易稅
+            commission += cost * 0.003  # 0.3% 交易稅
+        return commission
+
 # 參數優化
 def run_optimization_once(df:pd.DataFrame, ticker:str, strategy:bt.Strategy, print_strat:bool=False, num_transactions:int=5, performance_target:str=performance_target):
     cerebro = bt.Cerebro(optreturn=False)
@@ -40,10 +227,10 @@ def run_optimization_once(df:pd.DataFrame, ticker:str, strategy:bt.Strategy, pri
 
     cerebro.broker.setcash(100000)
     cerebro.broker.addcommissioninfo(TaiwanStockCommission())
-
+   
     print('Starting Portfolio Value: %.2f' % cerebro.broker.getvalue())
     cerebro.optstrategy(
-        TurtleStrategy_v4_1,
+        strategy,
         stock_id=ticker,
         start_date=one_k_days_ago,
         entry_period=range(10, 50, 10),  # 測試 10, 20, 30, 40, 50 天突破
@@ -57,7 +244,7 @@ def run_optimization_once(df:pd.DataFrame, ticker:str, strategy:bt.Strategy, pri
     cerebro.addanalyzer(bt.analyzers.Returns, _name='returns')  # 加入報酬率分析器
     cerebro.addanalyzer(bt.analyzers.Transactions, _name='transactions')
     # cerebro.addstrategy(TurtleStrategy_v1_1_1)
-    optimized_results = cerebro.run(maxcpus=4)
+    optimized_results = cerebro.run(maxcpus=1)
     # print('Ending Portfolio Value: %.2f' % cerebro.broker.getvalue())
     # 遍歷所有優化組合並顯示績效
     best_performance = -float('inf')
@@ -201,6 +388,29 @@ def print_backtest_result(bt_result, num_transactions: int, level=logging.INFO, 
     logger.log(level,f"Annual Return: {annual_return:.2%}")
 
 
+def init_logger(filename, mode='w'):
+    logger = logging.getLogger(filename)
+    logger.setLevel(logging.DEBUG)
+
+    # ✅ 確保只添加 handler 一次，避免重複輸出 log
+    if not logger.hasHandlers():
+        formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')        
+        # ✅ 設定 console handler
+        console_handler = logging.StreamHandler()
+        console_handler.setLevel(logging.INFO)
+        console_handler.setFormatter(formatter)
+        logger.addHandler(console_handler)
+
+        # ✅ 設定 file handler（確保 log 不會被重複寫入）
+        log_file = Path(f'log/{filename}')
+        log_file.parent.mkdir(parents=True, exist_ok=True)
+        file_handler = logging.FileHandler(f'log/{filename}', mode=mode, encoding="utf-8")
+        file_handler.setLevel(logging.DEBUG)
+        file_handler.setFormatter(formatter)
+        logger.addHandler(file_handler)
+
+    return logger
+
 def lookup_target():
     dataframe =  Dataloader.read_csv()
 
@@ -221,7 +431,7 @@ def lookup_target():
         print(f"開始優化 {ticker} 的策略參數")
         best_result = None
         try:
-            best_result = run_optimization_once(dataframe, ticker, TurtleStrategy_v4_1, False, num_transactions, "annual_return")
+            best_result = run_optimization_once(dataframe, ticker, Strategy.Turtle_v4_1, False, num_transactions, "annual_return")
         except Exception as e:
             print(f"⚠️ 優化 {ticker} 時發生錯誤: {e}")
             logger.error(f"⚠️ 優化 {ticker} 時發生錯誤: {e}")
@@ -258,8 +468,6 @@ def lookup_target():
     for x in watch_list:
         print_backtest_result(level=logging.INFO, bt_result=x["bt_result"], num_transactions=5)
 
-
-# TODO
 def download_data():
     etf_codes = []
 
