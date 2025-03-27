@@ -4,15 +4,19 @@
 ## Update Data:
 每日下午以後使用 `uv run download_data` 來下載資料
 
+## Lookup Target
 - 使用 `uv run lookup_target` 來找出隔日進場標的
 	- 在一個標的集合中找到適合進場者
 - 使用最近 1000 天的資料來回測
 - 並根據回測最佳年化回報率的策略，來判斷是否要進場
-- [ ] WAIT [[tag/question]] 是否可以知道資金佔用的時間
-  - [ ] NOW [[tag/implement]] 持股時間的計算 [[roadmap/workflow-1.0]]
+- [ ] WAIT 是否可以知道資金佔用的時間
+  - [ ] DOING 持股時間的計算 [[roadmap/workflow-1.0]]
 
 - 輔以人工判斷
 - 目前流程: 先根據夏普值取得最佳參數，再選取其中5天內有進場訊號的
+- [ ] TODO: 用前一年回測的最佳策略測試後一年的績效
+- [ ] TODO: 研究不同標的的相關性 
+- [ ] TODO: 計算回測總回報
 
 ## Check Watch List:
 - 使用 `uv run check_watch_list` 來確認出場標的
@@ -24,3 +28,4 @@
 
 ## Execute Order
 - 根據上述的進場與出場目標在格式進行操作
+- [ ] TODO 在 colab 上實作
