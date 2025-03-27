@@ -15,8 +15,11 @@ one_week_later = (datetime.now() + timedelta(days=7))
 one_k_days_ago = (datetime.now() - timedelta(days=1000))
 performance_target = "sharpe"
 
-watch_list = ["00662.TW", "00770.TW", "00893.TW", "00895.TW", "00916.TW"]
+WATCH_TARGETS = ["00662.TW", "00770.TW", "00893.TW", "00895.TW", "00916.TW"]
+SPECIAL_TARGETS = ["2330.TW"]
 
+ETF_FILE_NAME = "data/ETF.json"
+YFINANCE_FILE_NAME = "combined_stock_data.csv"
 
 class Dataloader(bt.feeds.PandasData):
     """ 自定義 Backtrader 數據源，格式化永豐 API 和 yfinance 的數據 """
@@ -51,7 +54,7 @@ class Dataloader(bt.feeds.PandasData):
 
     @classmethod
     def read_csv(self):
-        df = pd.read_csv("combined_stock_data.csv")                
+        df = pd.read_csv(YFINANCE_FILE_NAME)                
         return df
     
     @classmethod
@@ -540,7 +543,7 @@ def check_target():
     logger = init_logger("backtrader.log")
     dataframe =  Dataloader.read_csv()
 
-    target_list = watch_list  
+    target_list = WATCH_TARGETS  
 
     num_transactions = 5
     errors = []
@@ -586,14 +589,15 @@ def check_target():
 def download_data():
     etf_codes = []
 
-    with open('data/ETF-Origin.json', 'r', encoding='utf-8') as f:
+    with open(ETF_FILE_NAME, 'r', encoding='utf-8') as f:
         data = json.load(f)
         for etf in data:
             code = etf["基金代號"]
             # concat code with .TW
             etf_codes.append(f"{code}.TW")
     
-    etf_codes.append('2330.TW')
+    for ticker in SPECIAL_TARGETS:
+        etf_codes.append(ticker)
 
     # 批次下載（預設為每日資料）
     data = yf.download(
@@ -616,6 +620,6 @@ def download_data():
         combined_df = pd.concat([combined_df, df], ignore_index=True)
 
     # 儲存為單一 CSV
-    combined_df.to_csv("combined_stock_data.csv", index=False)
+    combined_df.to_csv(YFINANCE_FILE_NAME, index=False)
 
-    print("✅ 資料已儲存為 combined_stock_data.csv")
+    print(f"✅ 資料已儲存為 {YFINANCE_FILE_NAME}")
