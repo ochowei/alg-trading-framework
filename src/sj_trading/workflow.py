@@ -15,6 +15,9 @@ one_week_later = (datetime.now() + timedelta(days=7))
 one_k_days_ago = (datetime.now() - timedelta(days=1000))
 performance_target = "sharpe"
 
+watch_list = ["00662.TW", "00770.TW", "00893.TW", "00895.TW", "00916.TW"]
+
+
 class Dataloader(bt.feeds.PandasData):
     """ 自定義 Backtrader 數據源，格式化永豐 API 和 yfinance 的數據 """
     params = (
@@ -147,6 +150,7 @@ class Strategy:
             if  self.adx[0] > 20 and self.boll_width[0] > self.atr[0] and price > self.entry_high[0]:
                 self.logger.debug(f"💡 {trade_date} | 嘗試買入 {self.params.stock_id} @ {price:.2f} | Size: {size}")
                 self.signal_list.append({ "date": f"{trade_date}",
+                            "action": 1,
                             "size": size,
                             "price": price,
                             "total": -size * price,})
@@ -157,6 +161,7 @@ class Strategy:
                 self.logger.debug(f"💡 {trade_date} | 嘗試賣出 {self.params.stock_id} @ {price:.2f}")
                 if self.position:
                     self.signal_list.append({ "date": f"{trade_date}",
+                                "action": -1,
                                 "size": -size,
                                 "price": price,
                                 "total": size * price
@@ -518,7 +523,7 @@ def lookup_target():
             df_trades = pd.DataFrame(strat.signal_list)
             max_trade_date = df_trades['date'].max()
             #check if max_trade_date is greater than 2025-03-22
-            if ( df_trades['size'].iloc[-1]>=0 and max_trade_date > five_days_ago_str):
+            if ( df_trades['action'].iloc[-1]==1 and max_trade_date > five_days_ago_str):
                 watch_list.append({"ticker": ticker, "bt_result": best_result})
 
         print(f"結束優化 {ticker} 的策略參數")
@@ -531,6 +536,52 @@ def lookup_target():
     for x in watch_list:
         print_backtest_result(level=logging.INFO, bt_result=x["bt_result"], num_transactions=5)
 
+def check_target():
+    logger = init_logger("backtrader.log")
+    dataframe =  Dataloader.read_csv()
+
+    target_list = watch_list  
+
+    num_transactions = 5
+    errors = []
+    result_list = []
+    for ticker in target_list:
+        print(f"開始優化 {ticker} 的策略參數")
+        best_result = None
+        try:
+            best_result = run_optimization_once(dataframe, ticker, Strategy.Turtle_v4_1, False, num_transactions, "annual_return")
+        except Exception as e:
+            print(f"⚠️ 優化 {ticker} 時發生錯誤: {e}")
+            logger.error(f"⚠️ 優化 {ticker} 時發生錯誤: {e}")
+            errors.append({"ticker": ticker, "error": str(e)})
+            continue
+        if best_result is not None and best_result['sharpe'] != -float('inf'):
+            annual_return = best_result["strat"].analyzers.returns.get_analysis().get("rnorm", None)
+            sharpe = best_result["sharpe"]
+            if (annual_return < 0 ):
+                continue
+
+            print_backtest_result(level=logging.DEBUG, bt_result=best_result, num_transactions=5, filename=f"{ticker}/tutle_strategy.log")
+
+            if sharpe < 0.1:
+                continue
+
+            df_trades = []
+        # print last x trades
+            strat = best_result["strat"]                 
+                    
+            df_trades = pd.DataFrame(strat.signal_list)
+            max_trade_date = df_trades['date'].max()
+            #check if max_trade_date is greater than 2025-03-22
+            if ( df_trades['action'].iloc[-1] == -1 ):
+                #and max_trade_date > five_days_ago_str
+                result_list.append({"ticker": ticker, "bt_result": best_result})
+
+        print(f"結束優化 {ticker} 的策略參數")
+
+    print("🎉 優化完成！")
+    for x in result_list:
+        print_backtest_result(level=logging.INFO, bt_result=x["bt_result"], num_transactions=5)
 
 def download_data():
     etf_codes = []
