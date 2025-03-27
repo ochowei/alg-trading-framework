@@ -23,11 +23,11 @@ main = "sj_trading:main"
 version = "sj_trading:show_version"
 stock_testing = "sj_trading.testing_flow:testing_stock_ordering"
 futures_testing = "sj_trading.testing_flow:testing_futures_ordering"
-lookup_target = "sj_trading.workflow:lookup_target"
-check_target = "sj_trading.workflow:check_target"
+lookup_target = "workflow:lookup_target"
+check_target = "workflow:check_target"
 test_frequency = "sj_trading.workflow:test_frequency"
 test = "sj_trading.finmind:test"
-download_data = "sj_trading.workflow:download_data"
+download_data = "workflow:download_data"
 
 
 [build-system]
