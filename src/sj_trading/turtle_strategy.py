@@ -353,14 +353,15 @@ class TurtleStrategy_v4_1(bt.Strategy):
             if not self.position or True:
                 self.buy(size=size)
             self.last_trade_date = trade_date
-        elif self.position and price < self.exit_low[0]:
+        elif price < self.exit_low[0]:
             self.logger.debug(f"💡 {trade_date} | 嘗試賣出 {self.params.stock_id} @ {price:.2f}")
-            self.signal_list.append({ "date": f"{trade_date}",
-                        "size": -size,
-                        "price": price,
-                        "total": size * price
-                        })
-            self.close()            
+            if self.position:
+                self.signal_list.append({ "date": f"{trade_date}",
+                            "size": -size,
+                            "price": price,
+                            "total": size * price
+                            })
+                self.close()            
             self.last_trade_date = trade_date
     
     def notify_order(self, order):
