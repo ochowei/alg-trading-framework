@@ -438,7 +438,6 @@ def run_optimization_once(df:pd.DataFrame, ticker:str, strategy:bt.Strategy, pri
     cerebro.addanalyzer(bt.analyzers.SharpeRatio, _name='sharpe')
     cerebro.addanalyzer(bt.analyzers.DrawDown, _name='drawdown')
     cerebro.addanalyzer(bt.analyzers.TradeAnalyzer, _name='trade')
-    cerebro.addanalyzer(bt.analyzers.Returns, _name='returns')  # 加入報酬率分析器
     cerebro.addanalyzer(bt.analyzers.Transactions, _name='transactions')
     cerebro.addanalyzer(HoldingPeriodAnalyzer, _name='holdings')
     cerebro.addanalyzer(bt.analyzers.TimeReturn, _name='timereturn')
@@ -539,6 +538,7 @@ def run_optimization_once(df:pd.DataFrame, ticker:str, strategy:bt.Strategy, pri
                 "win_rate": win_rate,
                 "profit_factor": profit_factor,
                 "cumulative_return": cumulative_return,
+                "annual_return": annualized_return,
                 "strat": strat
             }
 
@@ -576,7 +576,7 @@ def print_backtest_result(bt_result, num_transactions: int, level=logging.INFO, 
     
     df_trades = pd.DataFrame(df_trades)
 
-    annual_return = bt_result["strat"].analyzers.returns.get_analysis().get("rnorm", None)
+    annual_return = bt_result["annual_return"]
     sharpe = bt_result["sharpe"]
     # print(f"\n=== 最後 {num_transactions} 筆交易 ===")
     # print(df_trades)       
@@ -700,9 +700,8 @@ def check_target():
             errors.append({"ticker": ticker, "error": str(e)})
             continue
         if best_result is not None and best_result['sharpe'] != -float('inf'):
-            annual_return = best_result["strat"].analyzers.returns.get_analysis().get("rnorm", None)
             sharpe = best_result["sharpe"]
-            if (annual_return < 0 ):
+            if (sharpe < 0 ):
                 continue
 
             print_backtest_result(level=logging.DEBUG, bt_result=best_result, num_transactions=5, filename=f"{ticker}/tutle_strategy.log")
