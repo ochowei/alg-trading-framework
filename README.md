@@ -1,4 +1,4 @@
-# Workflow 1.0
+# Workflow 1.1
 每天收盤後，重新下載歷史資料，根據回測與分析，得知隔天要進行的操作。
 
 ## Update Data:
