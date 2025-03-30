@@ -26,6 +26,22 @@ class ARGS:
     # 監控清單
     WATCH_TARGETS = ["00662.TW", "00770.TW", "00893.TW", "00895.TW", "00916.TW"]
     SPECIAL_TARGETS = ["2330.TW"]
+    
+    OPT_PARAMETERS_TUTLE_4_1 = {
+        "start_date": ONE_K_DAYS_AGO,
+        "entry_period": range(10, 50, 10),  # 測試 10, 20, 30, 40, 50 天突破
+        "exit_period": range(10, 41, 5)      # 測試 5, 10, 15, 20 天回撤
+    }
+
+    OPT_PARAMETERS_TUTLE_4_1_1 = {
+        "start_date": ONE_K_DAYS_AGO,
+        "entry_period": range(10, 50, 10),  # 測試 10, 20, 30, 40, 50 天突破
+        "exit_period": range(10, 41, 5),     # 測試 5, 10, 15, 20 天回撤
+        "kbar_filter": True,
+        "kbar_strength_ratio": [0.2, 0.5, 0.7],
+        "upper_shadow_ratio": [1.5, 2.0, 2.5],  # 長上影線條件
+    }
+    
 
 
 
@@ -231,7 +247,10 @@ class Strategy:
             stock_id = self.params.stock_id
             entry_period = self.params.entry_period
             exit_period = self.params.exit_period
-            log_filename = f"{stock_id}/tutle_strategy_{entry_period}_{exit_period}.log"
+            kbar_strength_ratio = self.params.kbar_strength_ratio
+            upper_shadow_ratio = self.params.upper_shadow_ratio
+
+            log_filename = f"{stock_id}/tutle_strategy_{entry_period}_{exit_period}_{kbar_strength_ratio}_{upper_shadow_ratio}.log"
             self.logger = init_logger(log_filename)
             self.logger.debug(f"🔹 回測開始 | 版本: v4.1 + KBar | stock_id: {stock_id} | Entry Period: {self.params.entry_period}, Exit Period: {self.params.exit_period}")
 
@@ -397,7 +416,7 @@ class HoldingPeriodAnalyzer(bt.Analyzer):
 
 
 # 參數優化
-def run_optimization_once(df:pd.DataFrame, ticker:str, strategy:bt.Strategy, print_strat:bool=False, num_transactions:int=5, performance_target:str=ARGS.PERFORMANCE_TARGET):
+def run_optimization_once(df:pd.DataFrame, ticker:str, strategy:bt.Strategy, print_strat:bool=False, num_transactions:int=5, performance_target:str=ARGS.PERFORMANCE_TARGET, opt_args=ARGS.OPT_PARAMETERS_TUTLE_4_1):
     cerebro = bt.Cerebro(optreturn=False)
     # trace list: 0050, 2330, 0052, 元大全球 AI（00762）, 00737(國泰全球 AI), 00757(統一 FANG+ ETF)* 00635U.TW(期元大S&P黃金)*
     # 下載並載入數據
@@ -426,13 +445,13 @@ def run_optimization_once(df:pd.DataFrame, ticker:str, strategy:bt.Strategy, pri
     cerebro.broker.addcommissioninfo(TaiwanStockCommission())
    
     print('Starting Portfolio Value: %.2f' % cerebro.broker.getvalue())
+    
     cerebro.optstrategy(
         strategy,
         stock_id=ticker,
-        start_date=ARGS.ONE_K_DAYS_AGO,
-        entry_period=range(10, 50, 10),  # 測試 10, 20, 30, 40, 50 天突破
-        exit_period=range(10, 41, 5)      # 測試 5, 10, 15, 20 天回撤
+        **opt_args
     )
+
 
        # 加入績效分析器
     cerebro.addanalyzer(bt.analyzers.SharpeRatio, _name='sharpe')
@@ -445,6 +464,8 @@ def run_optimization_once(df:pd.DataFrame, ticker:str, strategy:bt.Strategy, pri
     optimized_results = cerebro.run(maxcpus=1, optreturn=False)
     # print('Ending Portfolio Value: %.2f' % cerebro.broker.getvalue())
     # 遍歷所有優化組合並顯示績效
+    logger = init_logger(f"{ticker}/tutle_strategy.log")
+
     best_performance = -float('inf')
     best_result = None
 
@@ -505,10 +526,15 @@ def run_optimization_once(df:pd.DataFrame, ticker:str, strategy:bt.Strategy, pri
             #     }
             #     print(d)
 
-        entry_period = strat.params.entry_period
-        exit_period = strat.params.exit_period
-        logger = init_logger(f"{ticker}/tutle_strategy_{entry_period}_{exit_period}.log", mode='a')            
-            
+
+        params_dict = strat.params._getkwargs()
+        
+        logger = init_logger(f"{ticker}/tutle_strategy.log", mode='a')            
+        
+        logger.debug("===================")
+        
+        logger.debug(params_dict)
+
         logger.debug(f"Sharpe Ratio: {sharpe:.3f}" if sharpe else "Sharpe Ratio: 無法計算")
             
         logger.debug(f"Max Drawdown: {max_drawdown:.2f}%")
@@ -589,10 +615,11 @@ def print_backtest_result(bt_result, num_transactions: int, level=logging.INFO, 
     # print(f"Cumulative Return: {bt_result['cumulative_return']:.2%}") 
     # print(f"Annual Return: {annual_return:.2%}")
     #     
+
+    params_dict = strat.params._getkwargs()
     logger.log(level,f"==========================")
     logger.log(level,f"Stock ID: {stock_id}")
-    logger.log(level,f"Entry Period: {bt_result['params'].entry_period}")
-    logger.log(level,f"Exit Period: {bt_result['params'].exit_period}")
+    logger.log(level,f"{params_dict}")
     logger.log(level,f"Sharpe Ratio: {sharpe:.3f}")
     logger.log(level,f"Max Drawdown: {bt_result['max_drawdown']:.2f}%")
     logger.log(level,f"Win Rate: {bt_result['win_rate']:.2%}")
@@ -632,6 +659,10 @@ def lookup_target():
     tickers = Dataloader.list_tickers(dataframe)
     logger = init_logger("backtrader.log")
     target_list = tickers  
+    
+    opt_args = ARGS.OPT_PARAMETERS_TUTLE_4_1
+
+    opt_strategy = Strategy.Turtle_v4_1
 
     # read json from ./data/ETF.json with utf-8           
     # print(f"目標清單: {target_list}")
@@ -643,14 +674,13 @@ def lookup_target():
         print(f"開始優化 {ticker} 的策略參數")
         best_result = None
         try:
-            best_result = run_optimization_once(dataframe, ticker, Strategy.Turtle_v4_1, False, num_transactions, "annual_return")
+            best_result = run_optimization_once(dataframe, ticker, opt_strategy, False, num_transactions, "annual_return", opt_args=opt_args)
         except Exception as e:
             print(f"⚠️ 優化 {ticker} 時發生錯誤: {e}")
             logger.error(f"⚠️ 優化 {ticker} 時發生錯誤: {e}")
             errors.append({"ticker": ticker, "error": str(e)})
             continue
         if best_result is not None and best_result['sharpe'] != -float('inf'):
-            annual_return = best_result["strat"].analyzers.returns.get_analysis().get("rnorm", None)
             sharpe = best_result["sharpe"]
             if (sharpe < 0 ):
                 continue
@@ -685,6 +715,9 @@ def check_target():
     dataframe =  Dataloader.read_csv()
 
     target_list = ARGS.WATCH_TARGETS  
+    opt_args = ARGS.OPT_PARAMETERS_TUTLE_4_1_1
+
+    opt_strategy = Strategy.Turtle_v4_1_1
 
     num_transactions = 5
     errors = []
@@ -693,7 +726,7 @@ def check_target():
         print(f"開始優化 {ticker} 的策略參數")
         best_result = None
         try:
-            best_result = run_optimization_once(dataframe, ticker, Strategy.Turtle_v4_1, False, num_transactions, "annual_return")
+            best_result = run_optimization_once(dataframe, ticker, opt_strategy, False, num_transactions, "annual_return", opt_args)
         except Exception as e:
             print(f"⚠️ 優化 {ticker} 時發生錯誤: {e}")
             logger.error(f"⚠️ 優化 {ticker} 時發生錯誤: {e}")
@@ -701,13 +734,10 @@ def check_target():
             continue
         if best_result is not None and best_result['sharpe'] != -float('inf'):
             sharpe = best_result["sharpe"]
-            if (sharpe < 0 ):
-                continue
+         
 
             print_backtest_result(level=logging.DEBUG, bt_result=best_result, num_transactions=5, filename=f"{ticker}/tutle_strategy.log")
-
-            if sharpe < 0.1:
-                continue
+       
 
             df_trades = []
         # print last x trades
@@ -716,9 +746,9 @@ def check_target():
             df_trades = pd.DataFrame(strat.signal_list)
             max_trade_date = df_trades['date'].max()
             #check if max_trade_date is greater than 2025-03-22
-            if ( df_trades['action'].iloc[-1] == -1 ):
+            #if ( df_trades['action'].iloc[-1] == -1 ):
                 #and max_trade_date > five_days_ago_str
-                result_list.append({"ticker": ticker, "bt_result": best_result})
+            result_list.append({"ticker": ticker, "bt_result": best_result})
 
         print(f"結束優化 {ticker} 的策略參數")
 
