@@ -28,6 +28,7 @@ check_target = "workflow:check_target"
 test_frequency = "sj_trading.workflow:test_frequency"
 test = "sj_trading.finmind:test"
 download_data = "workflow:download_data"
+zip = "zip:zip_project_folder"
 
 
 [build-system]
