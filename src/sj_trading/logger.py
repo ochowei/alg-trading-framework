@@ -1,7 +1,6 @@
 import logging
 from pathlib import Path
 
-
 def init_logger(filename, mode='w'):
     logger = logging.getLogger(filename)
     logger.setLevel(logging.DEBUG)
