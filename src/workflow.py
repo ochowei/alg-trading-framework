@@ -10,13 +10,13 @@ import logging
 from datetime import datetime, timedelta
 from pathlib import Path
 
-class ARGS:
+class Config:
     """存放所有預定義的參數和常量"""
     
     # 日期相關變數
     FIVE_DAYS_AGO_STR = (datetime.now() - timedelta(days=5)).strftime('%Y-%m-%d')
     ONE_WEEK_LATER = (datetime.now() + timedelta(days=7))
-    ONE_K_DAYS_AGO = (datetime.now() - timedelta(days=1000))
+    ONE_THOUSAND_DAYS_AGO = (datetime.now() - timedelta(days=1000))
 
     # 常量
     PERFORMANCE_TARGET = "sharpe"
@@ -28,13 +28,13 @@ class ARGS:
     SPECIAL_TARGETS = []
     
     OPT_PARAMETERS_TUTLE_4_1 = {
-        "start_date": ONE_K_DAYS_AGO,
+        "start_date": ONE_THOUSAND_DAYS_AGO,
         "entry_period": range(10, 50, 10),  # 測試 10, 20, 30, 40, 50 天突破
         "exit_period": range(10, 41, 5)      # 測試 5, 10, 15, 20 天回撤
     }
 
     OPT_PARAMETERS_TUTLE_4_1_1 = {
-        "start_date": ONE_K_DAYS_AGO,
+        "start_date": ONE_THOUSAND_DAYS_AGO,
         "entry_period": range(10, 20, 30),  # 測試 10, 20, 30, 40, 50 天突破
         "exit_period": range(10, 41, 5),     # 測試 5, 10, 15, 20 天回撤
         "kbar_filter": True,
@@ -43,7 +43,7 @@ class ARGS:
     }
     
     OPT_PARAMETERS_BB_MR = {
-        "start_date": ONE_K_DAYS_AGO, # 或者您需要的回測起始日
+        "start_date": ONE_THOUSAND_DAYS_AGO, # 或者您需要的回測起始日
         "bb_period": range(5,31,5),     # 例如測試 15, 20, 25, 30 天週期
         "bb_devfactor": [1.8, 2.0, 2.2],   # 測試不同的標準差倍數
         "risk": [0.3, 0.9],       # 測試不同的風險比例
@@ -53,7 +53,7 @@ class ARGS:
     }
 
     OPT_PARAMETERS_RSI_MR = {
-    "start_date": ONE_K_DAYS_AGO,
+    "start_date": ONE_THOUSAND_DAYS_AGO,
     "rsi_period": [3, 5, 10],         # 測試不同的 RSI 週期
     "rsi_oversold": [5, 20, 25, 30],       # 測試不同的超賣線
     "rsi_exit_level": [30, 60],         # 測試不同的出場均值線
@@ -729,16 +729,16 @@ class HoldingPeriodAnalyzer(bt.Analyzer):
 
 
 # 參數優化
-def run_optimization_once(df:pd.DataFrame, ticker:str, strategy:bt.Strategy, print_strat:bool=False, num_transactions:int=5, performance_target:str=ARGS.PERFORMANCE_TARGET, opt_args=ARGS.OPT_PARAMETERS_TUTLE_4_1):
+def run_optimization_once(df:pd.DataFrame, ticker:str, strategy:bt.Strategy, print_strat:bool=False, num_transactions:int=5, performance_target:str=Config.PERFORMANCE_TARGET, opt_args=Config.OPT_PARAMETERS_TUTLE_4_1):
     cerebro = bt.Cerebro(optreturn=False)
     # trace list: 0050, 2330, 0052, 元大全球 AI（00762）, 00737(國泰全球 AI), 00757(統一 FANG+ ETF)* 00635U.TW(期元大S&P黃金)*
     # 下載並載入數據
-    start = ARGS.ONE_K_DAYS_AGO.strftime('%Y-%m-%d')
-    end = ARGS.ONE_WEEK_LATER.strftime('%Y-%m-%d')  
+    start = Config.ONE_THOUSAND_DAYS_AGO.strftime('%Y-%m-%d')
+    end = Config.ONE_WEEK_LATER.strftime('%Y-%m-%d')
     # end = one_week_later.strftime('%Y-%m-%d')
     print(f"start: {start}, end: {end}")
 
-    data_1 = Dataloader.from_csv_df(df=df, symbol=ticker, start=ARGS.ONE_K_DAYS_AGO.strftime('%Y-%m-%d'), end=end)
+    data_1 = Dataloader.from_csv_df(df=df, symbol=ticker, start=Config.ONE_THOUSAND_DAYS_AGO.strftime('%Y-%m-%d'), end=end)
     # stock = yf.Ticker(ticker)
     # check if data_1 is Less than 1
     if data_1 is None:
@@ -976,7 +976,7 @@ def lookup_target():
     logger = init_logger("backtrader.log")
     target_list = tickers  
     
-    opt_args = ARGS.OPT_PARAMETERS_BB_MR
+    opt_args = Config.OPT_PARAMETERS_BB_MR
 
     opt_strategy = BollingerBandsMeanReversion
 
@@ -1013,7 +1013,7 @@ def lookup_target():
             df_trades = pd.DataFrame(strat.signal_list)
             max_trade_date = df_trades['date'].max()
             #check if max_trade_date is greater than 2025-03-22
-            if ( df_trades['action'].iloc[-1]==1 and max_trade_date > ARGS.FIVE_DAYS_AGO_STR):
+            if ( df_trades['action'].iloc[-1]==1 and max_trade_date > Config.FIVE_DAYS_AGO_STR):
                 watch_list.append({"ticker": ticker, "bt_result": best_result})
 
         print(f"結束優化 {ticker} 的策略參數")
@@ -1030,8 +1030,8 @@ def check_target():
     logger = init_logger("backtrader.log")
     dataframe =  Dataloader.read_csv()
 
-    target_list = ARGS.WATCH_TARGETS  
-    opt_args = ARGS.OPT_PARAMETERS_BB_MR
+    target_list = Config.WATCH_TARGETS
+    opt_args = Config.OPT_PARAMETERS_BB_MR
 
     opt_strategy = BollingerBandsMeanReversion
 
@@ -1075,21 +1075,21 @@ def check_target():
 def download_data():
     etf_codes = []
 
-    with open(ARGS.ETF_FILE_NAME, 'r', encoding='utf-8') as f:
+    with open(Config.ETF_FILE_NAME, 'r', encoding='utf-8') as f:
         data = json.load(f)
         for etf in data:
             code = etf["基金代號"]
             # concat code with .TW
             etf_codes.append(f"{code}")
     
-    for ticker in ARGS.SPECIAL_TARGETS:
+    for ticker in Config.SPECIAL_TARGETS:
         etf_codes.append(ticker)
 
     # 批次下載（預設為每日資料）
     data = yf.download(
         tickers=etf_codes,
         start="2025-06-01",
-        end=ARGS.ONE_WEEK_LATER.strftime('%Y-%m-%d'),
+        end=Config.ONE_WEEK_LATER.strftime('%Y-%m-%d'),
         group_by='ticker',   # 會以股票代碼作為 key 分群
         auto_adjust=True,     # 自動調整股價（考慮除權息等）
         progress=True
@@ -1106,6 +1106,6 @@ def download_data():
         combined_df = pd.concat([combined_df, df], ignore_index=True)
 
     # 儲存為單一 CSV
-    combined_df.to_csv(ARGS.YFINANCE_FILE_NAME, index=False)
+    combined_df.to_csv(Config.YFINANCE_FILE_NAME, index=False)
 
-    print(f"✅ 資料已儲存為 {ARGS.YFINANCE_FILE_NAME}")
+    print(f"✅ 資料已儲存為 {Config.YFINANCE_FILE_NAME}")
