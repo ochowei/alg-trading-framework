@@ -20,7 +20,7 @@ class BollingerBandsMeanReversion(bt.Strategy):
         ("risk", 0.1),            # 單筆交易最大風險比例 (例如 0.02 代表 2%)
         ("max_position_ratio", 0.99), # 最大倉位佔總資金比例 (例如 0.9 代表 90%)
         ("stock_id", "STOCK.TW"),  # 股票代號 (用於日誌檔名)
-        ("start_date", datetime(2025, 1, 1)), # 只在此日期之後交易
+        ("start_date", datetime(2025, 6, 1)), # 只在此日期之後交易
         ("skip_dates", []),        # 這些日期不交易 (datetime.date 物件列表)
     )
 
@@ -113,7 +113,7 @@ class BollingerBandsMeanReversion(bt.Strategy):
             self.last_trade_date = trade_date # 記錄交易日期
 
         # 出場邏輯：價格回升觸及中線且目前持有倉位
-        elif self.position and price >= self.sma[0]:
+        elif self.position and price >= self.sma[0] + self.top_band[0]:
             self.logger.debug(f"💡 {trade_date} | 價格 {price:.2f} 回到中線 {self.sma[0]:.2f} | 嘗試賣出 (平倉)")
             self.order = self.close() # 平掉所有倉位
             self.signal_list.append({ "date": f"{trade_date}", "action": -1, "size": size, "price": price, "total": size * price })
