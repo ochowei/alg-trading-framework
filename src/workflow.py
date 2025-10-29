@@ -311,9 +311,13 @@ def lookup_target(filename: str = Config.YFINANCE_FILE_NAME):
     output_file = output_dir / "best_strategy_trades.json"
     with open(output_file, 'w', encoding='utf-8') as f:
         json.dump(all_best_trades, f, ensure_ascii=False, indent=2)
-
+    
     print(f"✅ 最佳策略的交易紀錄已匯出至 {output_file}")
-
+    sum_of_pnl = 0
+    for x in all_best_trades:
+        if 'pnl' in x:
+            sum_of_pnl += x['pnl']
+    print(f"所有最佳策略交易的總 PnL: {sum_of_pnl:.2f}")
 
     if len(errors) > 0:
         print("\n=== 錯誤清單 ===")
