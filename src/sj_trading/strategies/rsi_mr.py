@@ -1,6 +1,6 @@
 import backtrader as bt
 from datetime import datetime
-from src.sj_trading.logger import init_logger
+from sj_trading.logger import init_logger
 
 class RsiMeanReversion(bt.Strategy):
     """
