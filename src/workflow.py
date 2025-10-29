@@ -20,12 +20,12 @@ class ARGS:
 
     # 常量
     PERFORMANCE_TARGET = "sharpe"
-    ETF_FILE_NAME = "data/ETF.json"
+    ETF_FILE_NAME = "data/US.json"
     YFINANCE_FILE_NAME = "combined_stock_data.csv"
 
     # 監控清單
-    WATCH_TARGETS = ["00662.TW", "00770.TW", "00893.TW", "00895.TW", "00916.TW"]
-    SPECIAL_TARGETS = ["2330.TW"]
+    WATCH_TARGETS = []
+    SPECIAL_TARGETS = []
     
     OPT_PARAMETERS_TUTLE_4_1 = {
         "start_date": ONE_K_DAYS_AGO,
@@ -35,13 +35,31 @@ class ARGS:
 
     OPT_PARAMETERS_TUTLE_4_1_1 = {
         "start_date": ONE_K_DAYS_AGO,
-        "entry_period": range(10, 50, 10),  # 測試 10, 20, 30, 40, 50 天突破
+        "entry_period": range(10, 20, 30),  # 測試 10, 20, 30, 40, 50 天突破
         "exit_period": range(10, 41, 5),     # 測試 5, 10, 15, 20 天回撤
         "kbar_filter": True,
         "kbar_strength_ratio": [0.2, 0.5, 0.7],
         "upper_shadow_ratio": [1.5, 2.0, 2.5],  # 長上影線條件
     }
     
+    OPT_PARAMETERS_BB_MR = {
+        "start_date": ONE_K_DAYS_AGO, # 或者您需要的回測起始日
+        "bb_period": range(5,31,5),     # 例如測試 15, 20, 25, 30 天週期
+        "bb_devfactor": [1.8, 2.0, 2.2],   # 測試不同的標準差倍數
+        "risk": [0.3, 0.9],       # 測試不同的風險比例
+    # "atr_period": [14], # 如果 ATR 週期也想優化可以加入
+    # "max_position_ratio": [0.9], # 通常固定
+    # "skip_dates": [],
+    }
+
+    OPT_PARAMETERS_RSI_MR = {
+    "start_date": ONE_K_DAYS_AGO,
+    "rsi_period": [3, 5, 10],         # 測試不同的 RSI 週期
+    "rsi_oversold": [5, 20, 25, 30],       # 測試不同的超賣線
+    "rsi_exit_level": [30, 60],         # 測試不同的出場均值線
+    "risk": [ 0.9],             # 測試不同的風險比例
+    }
+
 
 
 
@@ -78,7 +96,7 @@ class Dataloader(bt.feeds.PandasData):
 
     @classmethod
     def read_csv(self):
-        df = pd.read_csv(ARGS.YFINANCE_FILE_NAME)                
+        df = pd.read_csv("yfinance_data.csv")                
         return df
     
     @classmethod
@@ -337,6 +355,301 @@ class Strategy:
 
 
 
+class RsiMeanReversion(bt.Strategy):
+    """
+    RSI 均值回歸策略 (RSI Mean Reversion Strategy)
+    - 進場條件：RSI 跌破超賣線 (e.g., 30)
+    - 出場條件：RSI 回升觸及中線 (e.g., 50)
+    - 風險管理：使用 ATR 計算動態倉位大小，限制單筆風險
+    - 沿用框架：日誌記錄, 交易範圍控制, 避免當沖, 最大倉位限制
+
+    版本號: v1.0
+    """
+
+    params = (
+        ("rsi_period", 14),        # RSI 週期
+        ("rsi_oversold", 30),      # RSI 超賣閾值
+        ("rsi_exit_level", 50),    # RSI 出場 (回歸均值) 閾值
+        ("atr_period", 14),        # ATR 週期，用於計算倉位
+        ("risk", 0.10),            # 單筆交易最大風險比例 (例如 0.02 代表 2%)
+        ("max_position_ratio", 0.9), # 最大倉位佔總資金比例 (例如 0.9 代表 90%)
+        ("stock_id", "STOCK.TW"),  # 股票代號 (用於日誌檔名)
+        ("start_date", datetime(2025, 1, 1)), # 只在此日期之後交易
+        ("skip_dates", []),        # 這些日期不交易 (datetime.date 物件列表)
+    )
+
+    def __init__(self):
+        stock_id = self.params.stock_id
+        rsi_period = self.params.rsi_period
+        rsi_oversold = self.params.rsi_oversold
+        log_filename = f"{stock_id}/rsi_mean_reversion_{rsi_period}_{rsi_oversold}.log"
+        self.logger = init_logger(log_filename, mode='w') # 使用 'w' 覆寫模式開始新回測紀錄
+        self.logger.debug(f"🔹 回測開始 | 版本: RSI Mean Reversion v1.0 | stock_id: {stock_id} | RSI Period: {rsi_period}, Oversold: {rsi_oversold}, Risk: {self.params.risk}")
+
+        # 指標定義
+        self.rsi = bt.indicators.RSI(self.data.close, period=self.params.rsi_period)
+        self.atr = bt.indicators.ATR(self.data, period=self.params.atr_period)
+
+        # 策略狀態變數
+        self.order = None # 用於追蹤待處理訂單
+        self.last_trade_date = None # 避免當沖
+        self.total_commission = 0 # 累計交易成本
+
+        self.signal_list = [] # 紀錄交易訊號
+
+    def next(self):
+        trade_date = self.datas[0].datetime.date(0)
+        price = self.data.close[0]
+        cash = self.broker.get_cash()
+        portfolio_value = self.broker.getvalue()
+
+        # --- 過濾條件 ---
+        # 1. 只在 start_date 之後交易
+        if trade_date < self.params.start_date.date():
+            return
+
+        # 2. 跳過指定日期
+        if trade_date in self.params.skip_dates:
+            self.logger.debug(f"❌ {trade_date} - 設定為不交易日，跳過")
+            return
+
+        # 3. 避免當沖 (同一天內不再進行新的開倉或平倉決策)
+        if self.last_trade_date == trade_date:
+            return
+
+        # 4. 如果已有掛單，則不進行新操作
+        if self.order:
+            return
+
+        # --- 策略邏輯 ---
+        # 計算倉位大小 (沿用 BB 策略的簡化邏輯，您也可以替換成 ATR 風險計算)
+        atr_value = self.atr[0]
+        if atr_value == 0: # 避免除以零
+             self.logger.warning(f"⚠️ {trade_date} | ATR 為 0，無法計算倉位大小")
+             return
+
+        # 簡化倉位計算：使用固定比例的資金
+        target_value = portfolio_value * self.params.risk # 每次投入風險比例的資金
+        size = target_value / price
+
+
+        # 倉位大小上限控制
+        max_position_value = cash * self.params.max_position_ratio
+        required_cash = size * price
+        if required_cash > max_position_value:
+            size = max_position_value / price # 調整 size
+            self.logger.debug(f"⚠️ {trade_date} | 觸發最大倉位限制，調整下單 Size 為 {int(size)}")
+
+        size = int(size) # 確保是整數股數
+        if size <= 0: # 避免下單 0 股
+            return
+        
+        current_rsi = self.rsi[0]
+
+        # 進場邏輯：RSI 跌破超賣線且目前無倉位
+        # (使用 self.rsi[0] < X and self.rsi[-1] >= X 可以抓 "剛跌破" 的那一刻)
+        # (這裡使用簡化邏KA：只要低於超賣線就視為訊號)
+        if not self.position and current_rsi < self.params.rsi_oversold:
+            self.logger.debug(f"💡 {trade_date} | RSI {current_rsi:.2f} 跌破超賣線 {self.params.rsi_oversold} | 嘗試買入 | Size: {size}")
+            self.order = self.buy(size=size)
+            self.signal_list.append({ "date": f"{trade_date}", "action": 1, "size": size, "price": price, "total": -size * price })
+
+            self.last_trade_date = trade_date # 記錄交易日期
+
+        # 出場邏輯：RSI 回升觸及中線且目前持有倉位
+        elif self.position and current_rsi >= self.params.rsi_exit_level:
+            self.logger.debug(f"💡 {trade_date} | RSI {current_rsi:.2f} 回到中線 {self.params.rsi_exit_level} | 嘗試賣出 (平倉)")
+            self.order = self.close() # 平掉所有倉位
+            self.signal_list.append({ "date": f"{trade_date}", "action": 1, "size": size, "price": price, "total": -size * price })
+            self.last_trade_date = trade_date # 記錄交易日期
+
+    def notify_order(self, order):
+        trade_date = self.datas[0].datetime.date(0)
+        action = "買進" if order.isbuy() else "賣出"
+        status = order.getstatusname()
+        price = order.executed.price if order.executed else 0
+        size = order.executed.size if order.executed else 0
+
+        self.logger.debug(f"  ➡️ {trade_date} | 訂單通知 | Ref: {order.ref} | Type: {action} | Status: {status} | Size: {size} | Price: {price:.2f}")
+
+        if order.status in [order.Completed]:
+            cost = order.executed.value
+            commission = order.executed.comm
+            self.total_commission += commission
+            cash_remain = self.broker.get_cash()
+            portfolio_value = self.broker.getvalue()
+            pnl = order.executed.pnl
+            self.logger.debug(f"✅ {trade_date} | 交易完成 @ {price:.2f} | Size: {size}")
+            log_action = "⬅️" if size < 0 else "➡️" # 視覺化買賣方向
+            self.logger.debug(f"   {log_action} 交易金額: {cost:.2f} | PnL: {pnl:.2f} | 交易成本: {commission:.2f}")
+            self.logger.debug(f"   💰 現金餘額: {cash_remain:.2f} | 總資產: {portfolio_value:.2f}")
+            self.order = None # 訂單完成，清除追蹤
+
+        elif order.status in [order.Canceled, order.Margin, order.Rejected]:
+            self.logger.warning(f"⚠️ {trade_date} | 訂單未能完成 | Status: {status}")
+            self.order = None # 訂單失敗，清除追蹤
+
+    def stop(self):
+        final_value = self.broker.getvalue()
+        self.logger.debug("="*20 + " 回測結束 " + "="*20)
+        self.logger.debug(f"🔹 最終資產價值: {final_value:.2f}")
+        self.logger.debug(f"🔹 總手續費支出: {self.total_commission:.2f}")
+        self.logger.debug(f"🔹 使用參數: RSI Period={self.params.rsi_period}, Oversold={self.params.rsi_oversold}, Exit={self.params.rsi_exit_level}, Risk={self.params.risk}")
+        self.logger.debug("="*50)
+
+
+class BollingerBandsMeanReversion(bt.Strategy):
+    """
+    布林通道均值回歸策略 (Bollinger Bands Mean Reversion Strategy)
+    - 進場條件：價格跌破布林通道下軌
+    - 出場條件：價格回升觸及布林通道中線 (SMA)
+    - 風險管理：使用 ATR 計算動態倉位大小，限制單筆風險
+    - 沿用框架：日誌記錄, 交易範圍控制, 避免當沖, 最大倉位限制
+
+    版本號: v1.0
+    """
+
+    params = (
+        ("bb_period", 20),         # 布林通道週期
+        ("bb_devfactor", 2.0),     # 布林通道標準差倍數
+        ("atr_period", 14),        # ATR 週期，用於計算倉位
+        ("risk", 0.1),            # 單筆交易最大風險比例 (例如 0.02 代表 2%)
+        ("max_position_ratio", 0.99), # 最大倉位佔總資金比例 (例如 0.9 代表 90%)
+        ("stock_id", "STOCK.TW"),  # 股票代號 (用於日誌檔名)
+        ("start_date", datetime(2025, 1, 1)), # 只在此日期之後交易
+        ("skip_dates", []),        # 這些日期不交易 (datetime.date 物件列表)
+    )
+
+    def __init__(self):
+        stock_id = self.params.stock_id
+        bb_period = self.params.bb_period
+        bb_devfactor = self.params.bb_devfactor
+        log_filename = f"{stock_id}/bb_mean_reversion_{bb_period}_{bb_devfactor}.log"
+        self.logger = init_logger(log_filename, mode='w') # 使用 'w' 覆寫模式開始新回測紀錄
+        self.logger.debug(f"🔹 回測開始 | 版本: BB Mean Reversion v1.0 | stock_id: {stock_id} | BB Period: {bb_period}, DevFactor: {bb_devfactor}, Risk: {self.params.risk}")
+
+        # 指標定義
+        self.bollinger = bt.indicators.BollingerBands(
+            self.data.close,
+            period=self.params.bb_period,
+            devfactor=self.params.bb_devfactor
+        )
+        self.atr = bt.indicators.ATR(self.data, period=self.params.atr_period)
+
+        # 策略狀態變數
+        self.order = None # 用於追蹤待處理訂單
+        self.last_trade_date = None # 避免當沖
+        self.total_commission = 0 # 累計交易成本
+        self.signal_list = []
+        # 方便訪問布林通道線路
+        self.sma = self.bollinger.lines.mid
+        self.top_band = self.bollinger.lines.top
+        self.bot_band = self.bollinger.lines.bot
+
+    def next(self):
+        trade_date = self.datas[0].datetime.date(0)
+        price = self.data.close[0]
+        cash = self.broker.get_cash()
+        portfolio_value = self.broker.getvalue()
+
+        # --- 過濾條件 ---
+        # 1. 只在 start_date 之後交易
+        if trade_date < self.params.start_date.date():
+            return
+
+        # 2. 跳過指定日期
+        if trade_date in self.params.skip_dates:
+            self.logger.debug(f"❌ {trade_date} - 設定為不交易日，跳過")
+            return
+
+        # 3. 避免當沖 (同一天內不再進行新的開倉或平倉決策)
+        if self.last_trade_date == trade_date:
+            return
+
+        # 4. 如果已有掛單，則不進行新操作
+        if self.order:
+            return
+
+        # --- 策略邏輯 ---
+        # 計算倉位大小
+        atr_value = self.atr[0]
+        if atr_value == 0: # 避免除以零
+             self.logger.warning(f"⚠️ {trade_date} | ATR 為 0，無法計算倉位大小")
+             return
+
+        # 風險額度 = 帳戶總值 * 風險比例
+        risk_amount = portfolio_value * self.params.risk
+        # 每股曝險 = ATR * (某個倍數，例如 2) -> 這裡簡單用 ATR 本身作為波動參考
+        # 或者更簡單地，直接用價格的某個百分比，例如 1%
+        # risk_per_share = atr_value * 2
+        # size = risk_amount / risk_per_share
+
+        # 另一種簡化倉位計算：使用固定比例的資金
+        target_value = portfolio_value * self.params.risk # 每次投入風險比例的資金
+        size = target_value / price
+
+
+        # 倉位大小上限控制
+        max_position_value = cash * self.params.max_position_ratio
+        required_cash = size * price
+        if required_cash > max_position_value:
+            size = max_position_value / price # 調整 size
+            self.logger.debug(f"⚠️ {trade_date} | 觸發最大倉位限制，調整下單 Size 為 {int(size)}")
+
+        size = int(size) # 確保是整數股數
+        if size <= 0: # 避免下單 0 股
+            return
+
+        # 進場邏輯：價格跌破下軌且目前無倉位
+        if not self.position and price < self.bot_band[0]:
+            self.logger.debug(f"💡 {trade_date} | 價格 {price:.2f} 跌破下軌 {self.bot_band[0]:.2f} | 嘗試買入 | Size: {size}")
+            self.order = self.buy(size=size)
+            self.signal_list.append({ "date": f"{trade_date}", "action": 1, "size": size, "price": price, "total": -size * price })
+
+            self.last_trade_date = trade_date # 記錄交易日期
+
+        # 出場邏輯：價格回升觸及中線且目前持有倉位
+        elif self.position and price >= self.sma[0]:
+            self.logger.debug(f"💡 {trade_date} | 價格 {price:.2f} 回到中線 {self.sma[0]:.2f} | 嘗試賣出 (平倉)")
+            self.order = self.close() # 平掉所有倉位
+            self.signal_list.append({ "date": f"{trade_date}", "action": -1, "size": size, "price": price, "total": size * price })
+
+            self.last_trade_date = trade_date # 記錄交易日期
+
+    def notify_order(self, order):
+        trade_date = self.datas[0].datetime.date(0)
+        action = "買進" if order.isbuy() else "賣出"
+        status = order.getstatusname()
+        price = order.executed.price if order.executed else 0
+        size = order.executed.size if order.executed else 0
+
+        self.logger.debug(f"  ➡️ {trade_date} | 訂單通知 | Ref: {order.ref} | Type: {action} | Status: {status} | Size: {size} | Price: {price:.2f}")
+
+        if order.status in [order.Completed]:
+            cost = order.executed.value
+            commission = order.executed.comm
+            self.total_commission += commission
+            cash_remain = self.broker.get_cash()
+            portfolio_value = self.broker.getvalue()
+            pnl = order.executed.pnl
+            self.logger.debug(f"✅ {trade_date} | 交易完成 @ {price:.2f} | Size: {size}")
+            log_action = "⬅️" if size < 0 else "➡️" # 視覺化買賣方向
+            self.logger.debug(f"   {log_action} 交易金額: {cost:.2f} | PnL: {pnl:.2f} | 交易成本: {commission:.2f}")
+            self.logger.debug(f"   💰 現金餘額: {cash_remain:.2f} | 總資產: {portfolio_value:.2f}")
+            self.order = None # 訂單完成，清除追蹤
+
+        elif order.status in [order.Canceled, order.Margin, order.Rejected]:
+            self.logger.warning(f"⚠️ {trade_date} | 訂單未能完成 | Status: {status}")
+            self.order = None # 訂單失敗，清除追蹤
+
+    def stop(self):
+        final_value = self.broker.getvalue()
+        self.logger.debug("="*20 + " 回測結束 " + "="*20)
+        self.logger.debug(f"🔹 最終資產價值: {final_value:.2f}")
+        self.logger.debug(f"🔹 總手續費支出: {self.total_commission:.2f}")
+        self.logger.debug(f"🔹 使用參數: BB Period={self.params.bb_period}, DevFactor={self.params.bb_devfactor}, Risk={self.params.risk}")
+        self.logger.debug("="*50)
+
 class TaiwanStockCommission(bt.CommInfoBase):
     """
     台股交易成本：
@@ -344,7 +657,7 @@ class TaiwanStockCommission(bt.CommInfoBase):
     - 賣出：收 0.1% 手續費 + 0.3% 交易稅
     """
     params = (
-        ("commission", 0.001),  # 手續費 0.1%
+        ("commission", 0),  # 手續費 0.1%
         ("stocklike", True),  # 股票類資產
     )
 
@@ -352,7 +665,7 @@ class TaiwanStockCommission(bt.CommInfoBase):
         cost = abs(size) * price  # 交易金額
         commission = cost * self.p.commission  # 計算手續費
         if size < 0:  # 只有賣出時收交易稅
-            commission += cost * 0.003  # 0.3% 交易稅
+            commission += cost * 0.000  # 0.3% 交易稅
         return commission
 
 
@@ -421,7 +734,7 @@ def run_optimization_once(df:pd.DataFrame, ticker:str, strategy:bt.Strategy, pri
     # trace list: 0050, 2330, 0052, 元大全球 AI（00762）, 00737(國泰全球 AI), 00757(統一 FANG+ ETF)* 00635U.TW(期元大S&P黃金)*
     # 下載並載入數據
     start = ARGS.ONE_K_DAYS_AGO.strftime('%Y-%m-%d')
-    end = "2025-03-27"
+    end = ARGS.ONE_WEEK_LATER.strftime('%Y-%m-%d')  
     # end = one_week_later.strftime('%Y-%m-%d')
     print(f"start: {start}, end: {end}")
 
@@ -454,7 +767,10 @@ def run_optimization_once(df:pd.DataFrame, ticker:str, strategy:bt.Strategy, pri
 
 
        # 加入績效分析器
-    cerebro.addanalyzer(bt.analyzers.SharpeRatio, _name='sharpe')
+    cerebro.addanalyzer(bt.analyzers.SharpeRatio,
+                        _name='sharpe',
+                        timeframe=bt.TimeFrame.Days,
+                        riskfreerate=0.01) # 假設 1% (0.01) 的無風險利率
     cerebro.addanalyzer(bt.analyzers.DrawDown, _name='drawdown')
     cerebro.addanalyzer(bt.analyzers.TradeAnalyzer, _name='trade')
     cerebro.addanalyzer(bt.analyzers.Transactions, _name='transactions')
@@ -660,9 +976,9 @@ def lookup_target():
     logger = init_logger("backtrader.log")
     target_list = tickers  
     
-    opt_args = ARGS.OPT_PARAMETERS_TUTLE_4_1
+    opt_args = ARGS.OPT_PARAMETERS_BB_MR
 
-    opt_strategy = Strategy.Turtle_v4_1
+    opt_strategy = BollingerBandsMeanReversion
 
     # read json from ./data/ETF.json with utf-8           
     # print(f"目標清單: {target_list}")
@@ -715,9 +1031,9 @@ def check_target():
     dataframe =  Dataloader.read_csv()
 
     target_list = ARGS.WATCH_TARGETS  
-    opt_args = ARGS.OPT_PARAMETERS_TUTLE_4_1_1
+    opt_args = ARGS.OPT_PARAMETERS_BB_MR
 
-    opt_strategy = Strategy.Turtle_v4_1_1
+    opt_strategy = BollingerBandsMeanReversion
 
     num_transactions = 5
     errors = []
@@ -764,7 +1080,7 @@ def download_data():
         for etf in data:
             code = etf["基金代號"]
             # concat code with .TW
-            etf_codes.append(f"{code}.TW")
+            etf_codes.append(f"{code}")
     
     for ticker in ARGS.SPECIAL_TARGETS:
         etf_codes.append(ticker)
@@ -772,7 +1088,7 @@ def download_data():
     # 批次下載（預設為每日資料）
     data = yf.download(
         tickers=etf_codes,
-        start="1998-01-01",
+        start="2025-06-01",
         end=ARGS.ONE_WEEK_LATER.strftime('%Y-%m-%d'),
         group_by='ticker',   # 會以股票代碼作為 key 分群
         auto_adjust=True,     # 自動調整股價（考慮除權息等）
