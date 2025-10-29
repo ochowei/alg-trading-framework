@@ -251,7 +251,7 @@ def lookup_target(filename: str = Config.YFINANCE_FILE_NAME):
     ticker_list_2 = ['0050.TW', '2330.TW', '00737.TW', '00635U.TW'] # 第二關注目標
     tickers = Dataloader.list_tickers(dataframe)
     logger = init_logger("backtrader.log")
-    target_list = tickers  
+    target_list = tickers
     
     opt_args = Config.OPT_PARAMETERS_BB_MR
 
@@ -262,6 +262,7 @@ def lookup_target(filename: str = Config.YFINANCE_FILE_NAME):
     num_transactions = 5
     errors = []
     watch_list = []
+    all_best_trades = []
     
     for ticker in target_list:
         print(f"開始優化 {ticker} 的策略參數")
@@ -283,17 +284,36 @@ def lookup_target(filename: str = Config.YFINANCE_FILE_NAME):
             if sharpe < 0.1:
                 continue
 
-            df_trades = []
-        # print last x trades
-            strat = best_result["strat"]                 
-                    
+            strat = best_result["strat"]
+            if strat.signal_list:
+                trades = strat.signal_list
+                for trade in trades:
+                    trade["ticker"] = ticker
+                all_best_trades.extend(trades)
+
             df_trades = pd.DataFrame(strat.signal_list)
-            max_trade_date = df_trades['date'].max()
-            #check if max_trade_date is greater than 2025-03-22
-            if ( df_trades['action'].iloc[-1]==1 and max_trade_date > Config.FIVE_DAYS_AGO_STR):
-                watch_list.append({"ticker": ticker, "bt_result": best_result})
+            if not df_trades.empty:
+                max_trade_date = df_trades['date'].max()
+                #check if max_trade_date is greater than 2025-03-22
+                if ( df_trades['action'].iloc[-1]==1 and max_trade_date > Config.FIVE_DAYS_AGO_STR):
+                    watch_list.append({"ticker": ticker, "bt_result": best_result})
 
         print(f"結束優化 {ticker} 的策略參數")
+
+    # Sort all trades by date
+    all_best_trades.sort(key=lambda x: x['date'])
+
+    # Ensure the output directory exists
+    output_dir = Path("output")
+    output_dir.mkdir(exist_ok=True)
+
+    # Write to JSON file
+    output_file = output_dir / "best_strategy_trades.json"
+    with open(output_file, 'w', encoding='utf-8') as f:
+        json.dump(all_best_trades, f, ensure_ascii=False, indent=2)
+
+    print(f"✅ 最佳策略的交易紀錄已匯出至 {output_file}")
+
 
     if len(errors) > 0:
         print("\n=== 錯誤清單 ===")
