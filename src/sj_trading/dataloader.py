@@ -1,21 +1,8 @@
 import backtrader as bt
-import shioaji as sj
 import os
 import pandas as pd
 import yfinance as yf
 from datetime import datetime
-
-def login_sinopac():
-    api = sj.Shioaji(simulation=True)
-    api.login(
-        api_key=os.environ["API_KEY"],
-        secret_key=os.environ["SECRET_KEY"],
-    )
-    api.activate_ca(
-        ca_path=os.environ["CA_CERT_PATH"],
-        ca_passwd=os.environ["CA_PASSWORD"],
-    )
-    return api
 
 
 class Dataloader(bt.feeds.PandasData):
@@ -30,33 +17,6 @@ class Dataloader(bt.feeds.PandasData):
         ('openinterest', -1),
     )
 
-    @classmethod
-    def from_sinopac(cls, symbol, start, end):
-        api = login_sinopac()
-
-        """ 從永豐 API 下載歷史數據，並轉換為 Backtrader 可用格式 """
-        kbars = api.kbars(api.Contracts.Stocks[symbol], start=start, end=end)
-        df = pd.DataFrame({
-            'datetime': pd.to_datetime(kbars.ts, unit='ns'),
-            'open': kbars.Open,
-            'high': kbars.High,
-            'low': kbars.Low,
-            'close': kbars.Close,
-            'volume': kbars.Volume,
-            'openinterest': 0,  # 永豐 API 不提供 Open Interest，因此填 0
-        })
-        df.set_index('datetime', inplace=True)
-
-        df_daily = df.resample('1D').agg({
-            'open': 'first',
-            'high': 'max',
-            'low': 'min',
-            'close': 'last',
-            'volume': 'sum',
-            'openinterest': 'sum'
-        }).dropna()
-        print(df.tail(20))
-        return cls(dataname=df_daily)
 
     @classmethod
     def from_yfinance(cls, symbol, start, end):
