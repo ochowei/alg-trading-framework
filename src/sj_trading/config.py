@@ -33,7 +33,7 @@ class Config:
     }
 
     OPT_PARAMETERS_BB_MR = {
-        "start_date": datetime(2025, 6, 1),
+        "start_date": datetime(2025, 8, 1),
         "bb_period": range(5,31,5),
         "bb_devfactor":  [1.2,1.4,1.6,1.8, 2.0, 2.2],
         "risk": [0.9],
