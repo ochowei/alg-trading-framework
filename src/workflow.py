@@ -908,9 +908,13 @@ def init_logger(filename, mode='w'):
 
     return logger
 
-def lookup_target():
-    dataframe =  Dataloader.read_csv()
+import argparse
 
+def lookup_target(filename: str = Config.YFINANCE_FILE_NAME):
+    dataframe =  Dataloader.read_csv(filename)
+    if dataframe.empty:
+        print(f"無法從 {filename} 讀取到數據，lookup_target 中止。")
+        return
     # tutle 4.1 trace list: 0050.TW, 2330.TW, 00757, 00635U.TW, 00893.TW, 00895.TW
     ticker_list_1 = ['00893.TW'] # 第一關注目標
     ticker_list_2 = ['0050.TW', '2330.TW', '00737.TW', '00635U.TW'] # 第二關注目標
@@ -1051,3 +1055,25 @@ def download_data():
     combined_df.to_csv(Config.YFINANCE_FILE_NAME, index=False)
 
     print(f"✅ 資料已儲存為 {Config.YFINANCE_FILE_NAME}")
+
+def main():
+    """
+    主執行入口點，用於解析命令列參數並執行 lookup_target。
+    """
+    parser = argparse.ArgumentParser(description="演算法交易框架 - 策略回測優化")
+
+    parser.add_argument(
+        "--filename",
+        type=str,
+        default=Config.YFINANCE_FILE_NAME,
+        help=f"要讀取的 CSV 資料檔案路徑 (預設: {Config.YFINANCE_FILE_NAME})"
+    )
+
+    args = parser.parse_args()
+
+    print(f"🔄 開始執行 lookup_target，使用資料檔案: {args.filename}")
+
+    lookup_target(filename=args.filename)
+
+if __name__ == "__main__":
+    main()

@@ -38,8 +38,11 @@ class Dataloader(bt.feeds.PandasData):
         return all_data
 
     @classmethod
-    def read_csv(self):
-        df = pd.read_csv("combined_stock_data.csv")                
+    def read_csv(cls, filename: str):
+        if not os.path.exists(filename):
+            print(f"Error: 檔案 {filename} 不存在。")
+            return pd.DataFrame() # 回傳空的 DataFrame
+        df = pd.read_csv(filename)
         return df
     
     @classmethod
