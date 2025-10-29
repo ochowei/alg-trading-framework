@@ -7,8 +7,8 @@ class TaiwanStockCommission(bt.CommInfoBase):
     - 賣出：收 0.1% 手續費 + 0.3% 交易稅
     """
     params = (
-        ("commission", 0.001),  # 手續費 0.1%
-        ("tax", 0.003), # 交易稅 0.3%
+        ("commission", 0.000),  # 手續費 0.1%
+        ("tax", 0.000), # 交易稅 0.3%
         ("stocklike", True),  # 股票類資產
     )
 

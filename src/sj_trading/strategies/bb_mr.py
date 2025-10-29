@@ -66,13 +66,13 @@ class BollingerBandsMeanReversion(bt.Strategy):
             self.logger.debug(f"❌ {trade_date} - 設定為不交易日，跳過")
             return
 
-        # 3. 避免當沖 (同一天內不再進行新的開倉或平倉決策)
-        if self.last_trade_date == trade_date:
-            return
+        # # 3. 避免當沖 (同一天內不再進行新的開倉或平倉決策)
+        # if self.last_trade_date == trade_date:
+        #     return
 
-        # 4. 如果已有掛單，則不進行新操作
-        if self.order:
-            return
+        # # 4. 如果已有掛單，則不進行新操作
+        # if self.order:
+        #     return
 
         # --- 策略邏輯 ---
         # 計算倉位大小
@@ -82,7 +82,7 @@ class BollingerBandsMeanReversion(bt.Strategy):
              return
 
         # 風險額度 = 帳戶總值 * 風險比例
-        risk_amount = portfolio_value * self.params.risk
+        # risk_amount = portfolio_value * self.params.risk
         # 每股曝險 = ATR * (某個倍數，例如 2) -> 這裡簡單用 ATR 本身作為波動參考
         # 或者更簡單地，直接用價格的某個百分比，例如 1%
         # risk_per_share = atr_value * 2
@@ -105,20 +105,19 @@ class BollingerBandsMeanReversion(bt.Strategy):
             return
 
         # 進場邏輯：價格跌破下軌且目前無倉位
-        if not self.position and price < self.bot_band[0]:
+        if  price < self.bot_band[0]:
             self.logger.debug(f"💡 {trade_date} | 價格 {price:.2f} 跌破下軌 {self.bot_band[0]:.2f} | 嘗試買入 | Size: {size}")
-            self.order = self.buy(size=size)
             self.signal_list.append({ "date": f"{trade_date}", "action": 1, "size": size, "price": price, "total": -size * price })
-
+            self.order = self.buy(size=size)                
             self.last_trade_date = trade_date # 記錄交易日期
 
         # 出場邏輯：價格回升觸及中線且目前持有倉位
-        elif self.position and price >= self.sma[0] + self.top_band[0]:
+        elif price >= self.sma[0] :
             self.logger.debug(f"💡 {trade_date} | 價格 {price:.2f} 回到中線 {self.sma[0]:.2f} | 嘗試賣出 (平倉)")
-            self.order = self.close() # 平掉所有倉位
             self.signal_list.append({ "date": f"{trade_date}", "action": -1, "size": size, "price": price, "total": size * price })
-
-            self.last_trade_date = trade_date # 記錄交易日期
+            if self.position:
+                self.order = self.close() # 平掉所有倉位
+                self.last_trade_date = trade_date # 記錄交易日期
 
     def notify_order(self, order):
         trade_date = self.datas[0].datetime.date(0)

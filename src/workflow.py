@@ -49,7 +49,7 @@ def run_optimization_once(df:pd.DataFrame, ticker:str, strategy:bt.Strategy, pri
     cerebro.adddata(data_1)
 
     cerebro.broker.setcash(100000)
-    cerebro.broker.addcommissioninfo(TaiwanStockCommission(commission=0.001, tax=0.003))
+    cerebro.broker.addcommissioninfo(TaiwanStockCommission())
    
     print('Starting Portfolio Value: %.2f' % cerebro.broker.getvalue())
     
