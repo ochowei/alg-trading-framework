@@ -547,6 +547,7 @@ def simulate_trades(file_path, initial_capital):
 
         day_trades = df[df['date'] == date]
         date_str = str(pd.to_datetime(date).date())        
+        pending_settlement = Decimal('0.0')
 
         # 1. --- 處理當天的所有賣出 (action == -2) ---
         sells = day_trades[day_trades['action'] == -2]
@@ -558,7 +559,7 @@ def simulate_trades(file_path, initial_capital):
                 position = portfolio.pop(ticker) # 賣出全部，所以用 pop
                 size_held = position['size']
                 cash_received = size_held * sell_price
-                cash += cash_received
+                pending_settlement += cash_received
                 
                 print(f"{date_str} [賣出完成] {ticker}:")
                 print(f"  > 賣出完成 {size_held:.4f} 股 @ ${sell_price:,.2f}，獲得 ${cash_received.quantize(CENTS, rounding=ROUND_HALF_UP):,}")
@@ -655,6 +656,8 @@ def simulate_trades(file_path, initial_capital):
                     size_to_buy = cost_of_buy / buy_price # 計算可購買的股數（可以是小數）
                     print(f"  > [買入訊號] {ticker}: 投入 ${cost_of_buy.quantize(CENTS, rounding=ROUND_HALF_UP):,} 購買 {size_to_buy:.4f} 股 @ ${buy_price:,.2f}。")
     
+        # Settle funds from today's sales for use on the next day
+        cash += pending_settlement
 
     print("\n--- 模擬結束 ---")
 
