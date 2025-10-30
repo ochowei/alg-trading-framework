@@ -119,22 +119,27 @@ class BollingerBandsMeanReversion(bt.Strategy):
         # 進場邏輯：價格跌破下軌且目前無倉位
         if  price < self.bot_band[0]:
             self.logger.debug(f"💡 {trade_date} | 價格 {price:.2f} 跌破下軌 {self.bot_band[0]:.2f} | 嘗試買入 | Size: {size}")
-            self.signal_list.append({ "date": f"{trade_date}", "action": 1, "size": size, "price": price, "total": -size * price })
 
             if not self.position:
+                self.signal_list.append({ "date": f"{trade_date}", "action": 1, "size": size, "price": price, "total": -size * price })
                 self.order = self.buy(size=size,exectype=bt.Order.Limit, price=price) # 限價單買入              
                 self.last_trade_date = trade_date # 記錄交易日期
+            else:
+                self.signal_list.append({ "date": f"{trade_date}", "action": 3, "size": size, "price": price, "total": -size * price })
+
 
         # 出場邏輯：價格回升觸及中線且目前持有倉位
         elif price >= self.sma[0] :
             self.logger.debug(f"💡 {trade_date} | 價格 {price:.2f} 回到中線 {self.sma[0]:.2f} | 嘗試賣出 (平倉)")
-            self.signal_list.append({ "date": f"{trade_date}", "action": -1, "size": size, "price": price, "total": size * price })
-
+            
             if self.position:
+                self.signal_list.append({ "date": f"{trade_date}", "action": -1, "size": size, "price": price, "total": size * price })
                 if self.stop_loss_order:
                     self.cancel(self.stop_loss_order)
                 self.sell(exectype=bt.Order.Limit, price=price, size=self.position.size)
                 self.last_trade_date = trade_date # 記錄交易日期
+            else:
+                self.signal_list.append({ "date": f"{trade_date}", "action": -3, "size": size, "price": price, "total": size * price })
 
     def notify_order(self, order):
         trade_date = self.datas[0].datetime.date(0)

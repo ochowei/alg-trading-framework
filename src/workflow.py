@@ -546,6 +546,22 @@ def simulate_trades(file_path, initial_capital):
         day_trades = df[df['date'] == date]
         date_str = str(pd.to_datetime(date).date())
         
+        # --- 處理當天的所有賣出訊號 (action == -1) ---
+        sell_signals = day_trades[day_trades['action'] == -1]
+        for _, row in sell_signals.iterrows():
+            ticker = row['ticker']
+            sell_price = Decimal(str(row['price']))
+
+            if ticker in portfolio:
+                position = portfolio[ticker]
+                size_held = position['size']
+                cash_received = size_held * sell_price                
+                print(f"{date_str} [賣出訊號] {ticker}:")
+                print(f"  > 賣出訊號 {size_held:.4f} 股 @ ${sell_price:,.2f}，獲得 ${cash_received.quantize(CENTS, rounding=ROUND_HALF_UP):,}")
+                
+            # else:
+                # print(f"{date_str} [賣出訊號] {ticker}: 投資組合中無此股票，忽略。")
+
         # 1. --- 處理當天的所有賣出 (action == -2) ---
         sells = day_trades[day_trades['action'] == -2]
         for _, row in sells.iterrows():
@@ -563,6 +579,26 @@ def simulate_trades(file_path, initial_capital):
                 print(f"  > 目前現金: ${cash.quantize(CENTS, rounding=ROUND_HALF_UP):,}")
             # else:
                 # print(f"{date_str} [賣出訊號] {ticker}: 投資組合中無此股票，忽略。")
+
+        # --- 處理當天的所有買入訊號 (action == 1) ---
+        buys_signals = day_trades[day_trades['action'] == 1]
+        num_buys = len(buys_signals)
+
+        if num_buys > 0 and cash > Decimal('0.01'): # 確保有現金且有買入訊號
+            cash_per_buy = cash / Decimal(num_buys)
+            
+            print(f"{date_str} [買入訊號] {num_buys} 個。可用現金 ${cash.quantize(CENTS, rounding=ROUND_HALF_UP):,}，每個訊號分配 ${cash_per_buy.quantize(CENTS, rounding=ROUND_HALF_UP):,}")
+            for _, row in buys_signals.iterrows():
+                buy_price = Decimal(str(row['price']))
+                ticker = row['ticker']
+
+                if buy_price > 0 and cash_per_buy > 0:
+                    # 分配的現金即為此次購買的成本
+                    cost_of_buy = cash_per_buy
+                    size_to_buy = cost_of_buy / buy_price # 計算可購買的股數（可以是小數）
+                    print(f"  > [買入訊號] {ticker}: 投入 ${cost_of_buy.quantize(CENTS, rounding=ROUND_HALF_UP):,} 購買 {size_to_buy:.4f} 股 @ ${buy_price:,.2f}。")
+
+            print("-" * 30)
 
         # 2. --- 處理當天的所有買入 (action == 2) ---
         buys = day_trades[day_trades['action'] == 2]
@@ -599,7 +635,7 @@ def simulate_trades(file_path, initial_capital):
                             'cost_basis': new_cost_basis,
                             'total_cost': new_total_cost
                         }
-                        print(f"  > [加倉] {ticker}: 投入 ${cost_of_buy.quantize(CENTS, rounding=ROUND_HALF_UP):,} 購買 {size_to_buy:.4f} 股 @ ${buy_price:,.2f}。")
+                        print(f"  > [加倉完成] {ticker}: 投入 ${cost_of_buy.quantize(CENTS, rounding=ROUND_HALF_UP):,} 購買 {size_to_buy:.4f} 股 @ ${buy_price:,.2f}。")
                         print(f"    > 新均價: ${new_cost_basis.quantize(CENTS, rounding=ROUND_HALF_UP):,}，新持有: {new_size:.4f} 股")
 
                     else:
@@ -609,7 +645,7 @@ def simulate_trades(file_path, initial_capital):
                             'cost_basis': buy_price,
                             'total_cost': cost_of_buy
                         }
-                        print(f"  > [買入] {ticker}: 投入 ${cost_of_buy.quantize(CENTS, rounding=ROUND_HALF_UP):,} 購買 {size_to_buy:.4f} 股 @ ${buy_price:,.2f}。")
+                        print(f"  > [買入完成] {ticker}: 投入 ${cost_of_buy.quantize(CENTS, rounding=ROUND_HALF_UP):,} 購買 {size_to_buy:.4f} 股 @ ${buy_price:,.2f}。")
             
             # 如果當天分配後有剩餘（例如 num_buys=0 但 cash>0），則加回
             # 在這個邏輯中，cash 在分配時已設為 0，所以買入後現金必為 0
