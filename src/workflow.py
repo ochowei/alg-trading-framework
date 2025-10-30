@@ -89,6 +89,7 @@ def run_optimization_once(df:pd.DataFrame, ticker:str, strategy:bt.Strategy, pri
         except Exception as e:
             sharpe = None
             print(f"Sharpe Ratio 計算錯誤: {e}")
+            continue
 
         max_drawdown = strat.analyzers.drawdown.get_analysis()["max"]["drawdown"]
         trade_analysis = strat.analyzers.trade.get_analysis()
@@ -286,7 +287,7 @@ def lookup_target(filename: str = Config.YFINANCE_FILE_NAME):
 
             print_backtest_result(level=logging.DEBUG, bt_result=best_result, num_transactions=5, filename=f"{ticker}/tutle_strategy.log")
 
-            if sharpe < 0.1 or cumulative_return <= 0:
+            if cumulative_return <= 0:
                 continue
 
             strat = best_result["strat"]
