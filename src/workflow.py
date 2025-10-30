@@ -20,6 +20,7 @@ from sj_trading.strategies.bb_mr import BollingerBandsMeanReversion
 from sj_trading.analyzers import HoldingPeriodAnalyzer
 from sj_trading.commissions import TaiwanStockCommission
 
+from decimal import Decimal, ROUND_HALF_UP
 
 
 # 參數優化
@@ -276,12 +277,14 @@ def lookup_target(filename: str = Config.YFINANCE_FILE_NAME):
             continue
         if best_result is not None and best_result['sharpe'] != -float('inf'):
             sharpe = best_result["sharpe"]
+            win_rate = best_result["win_rate"]
+            cumulative_return = best_result["cumulative_return"]
             if (sharpe < 0 ):
                 continue
 
             print_backtest_result(level=logging.DEBUG, bt_result=best_result, num_transactions=5, filename=f"{ticker}/tutle_strategy.log")
 
-            if sharpe < 0.1:
+            if sharpe < 0.1 or cumulative_return <= 0:
                 continue
 
             strat = best_result["strat"]
@@ -429,6 +432,167 @@ def main():
     print(f"🔄 開始執行 lookup_target，使用資料檔案: {args.filename}")
 
     lookup_target(filename=args.filename)
+
+
+
+
+def simulate_trades(file_path, initial_capital):
+    """
+    根據用戶指定的規則模擬交易。
+
+    規則：
+    1. 初始資金 10,000。
+    2. 只處理 action == 2 (買入) 和 action == -2 (賣出)。
+    3. 忽略 action == 1 和 action == -1。
+    4. 按日期處理。
+    5. 同一天內，先處理所有賣出 (-2)，再處理所有買入 (2)。
+    6. 買入 (2) 時：
+       a. 統計當天所有 '2' 訊號的數量 n。
+       b. 將 *目前所有現金* 均分為 n 份。
+       c. 根據每份資金和價格，買入對應的股票。
+       d. 如果現金不足 (cash == 0)，則無法購買。
+    7. 賣出 (-2) 時：
+       a. 賣出投資組合中該股票的 *全部* 持股。
+       b. 將賣出所得加回現金。
+    8. 結束時：
+       a. 總結餘 = 最終現金 + 剩餘持股的 *成本價值*。
+    
+    （使用 Decimal 來提高財務計算的精度）
+    """
+    try:
+        df = pd.read_json(file_path)
+    except Exception as e:
+        print(f"讀取 JSON 檔案時出錯: {e}")
+        return
+
+    # 確保按日期排序
+    df['date'] = pd.to_datetime(df['date'])
+    df = df.sort_values(by='date')
+
+    # 使用 Decimal 進行高精度計算
+    cash = Decimal(str(initial_capital))
+    portfolio = {}  # 格式: {'TICKER': {'size': Decimal, 'cost_basis': Decimal, 'total_cost': Decimal}}
+    
+    # 用於格式化輸出的 Decimal
+    ZERO = Decimal('0.00')
+    CENTS = Decimal('0.01')
+
+    print(f"--- 模擬開始 ---")
+    print(f"初始資金: ${cash.quantize(CENTS, rounding=ROUND_HALF_UP):,}")
+    print("-" * 30)
+
+    unique_dates = df['date'].unique()
+
+    for date in unique_dates:
+        day_trades = df[df['date'] == date]
+        date_str = str(pd.to_datetime(date).date())
+        
+        # 1. --- 處理當天的所有賣出 (action == -2) ---
+        sells = day_trades[day_trades['action'] == -2]
+        for _, row in sells.iterrows():
+            ticker = row['ticker']
+            sell_price = Decimal(str(row['price']))
+
+            if ticker in portfolio:
+                position = portfolio.pop(ticker) # 賣出全部，所以用 pop
+                size_held = position['size']
+                cash_received = size_held * sell_price
+                cash += cash_received
+                
+                print(f"{date_str} [賣出] {ticker}:")
+                print(f"  > 賣出 {size_held:.4f} 股 @ ${sell_price:,.2f}，獲得 ${cash_received.quantize(CENTS, rounding=ROUND_HALF_UP):,}")
+                print(f"  > 目前現金: ${cash.quantize(CENTS, rounding=ROUND_HALF_UP):,}")
+            # else:
+                # print(f"{date_str} [賣出訊號] {ticker}: 投資組合中無此股票，忽略。")
+
+        # 2. --- 處理當天的所有買入 (action == 2) ---
+        buys = day_trades[day_trades['action'] == 2]
+        num_buys = len(buys)
+
+        if num_buys > 0 and cash > Decimal('0.01'): # 確保有現金且有買入訊號
+            cash_per_buy = cash / Decimal(num_buys)
+            
+            print(f"{date_str} [買入訊號] {num_buys} 個。可用現金 ${cash.quantize(CENTS, rounding=ROUND_HALF_UP):,}，每個訊號分配 ${cash_per_buy.quantize(CENTS, rounding=ROUND_HALF_UP):,}")
+
+            current_cash_for_day = cash # 暫存當天一開始用於分配的現金
+            cash = Decimal('0.0') # 先假設所有現金都分配出去
+
+            for _, row in buys.iterrows():
+                ticker = row['ticker']
+                buy_price = Decimal(str(row['price']))
+
+                if buy_price > 0 and cash_per_buy > 0:
+                    # 分配的現金即為此次購買的成本
+                    cost_of_buy = cash_per_buy
+                    size_to_buy = cost_of_buy / buy_price # 計算可購買的股數（可以是小數）
+                    
+                    if ticker in portfolio:
+                        # 已持有，加倉並計算平均成本
+                        old_size = portfolio[ticker]['size']
+                        old_total_cost = portfolio[ticker]['total_cost']
+                        
+                        new_total_cost = old_total_cost + cost_of_buy
+                        new_size = old_size + size_to_buy
+                        new_cost_basis = new_total_cost / new_size
+                        
+                        portfolio[ticker] = {
+                            'size': new_size, 
+                            'cost_basis': new_cost_basis,
+                            'total_cost': new_total_cost
+                        }
+                        print(f"  > [加倉] {ticker}: 投入 ${cost_of_buy.quantize(CENTS, rounding=ROUND_HALF_UP):,} 購買 {size_to_buy:.4f} 股 @ ${buy_price:,.2f}。")
+                        print(f"    > 新均價: ${new_cost_basis.quantize(CENTS, rounding=ROUND_HALF_UP):,}，新持有: {new_size:.4f} 股")
+
+                    else:
+                        # 首次買入
+                        portfolio[ticker] = {
+                            'size': size_to_buy, 
+                            'cost_basis': buy_price,
+                            'total_cost': cost_of_buy
+                        }
+                        print(f"  > [買入] {ticker}: 投入 ${cost_of_buy.quantize(CENTS, rounding=ROUND_HALF_UP):,} 購買 {size_to_buy:.4f} 股 @ ${buy_price:,.2f}。")
+            
+            # 如果當天分配後有剩餘（例如 num_buys=0 但 cash>0），則加回
+            # 在這個邏輯中，cash 在分配時已設為 0，所以買入後現金必為 0
+            print(f"  > 買入後剩餘現金: ${cash.quantize(CENTS, rounding=ROUND_HALF_UP):,}")
+            print("-" * 30)
+
+
+    print("\n--- 模擬結束 ---")
+
+    # 3. --- 計算最終結餘 ---
+    final_portfolio_value = Decimal('0.0')
+    print("\n最終持股 (以成本價計算):")
+    if not portfolio:
+        print("  (無)")
+    
+    for ticker, position in portfolio.items():
+        size = position['size']
+        # 根據您的要求，使用 "當初購買的價格" (即平均成本) 來統計價值
+        cost_basis = position['cost_basis']
+        value_at_cost = size * cost_basis # 這等同於 total_cost
+        
+        final_portfolio_value += value_at_cost
+        print(f"  > {ticker}: {size:.4f} 股 @ 成本 ${cost_basis.quantize(CENTS, rounding=ROUND_HALF_UP):,} = 總成本價值 ${value_at_cost.quantize(CENTS, rounding=ROUND_HALF_UP):,}")
+
+    final_total_balance = cash + final_portfolio_value
+
+    print("\n--- 最終結算 ---")
+    print(f"初始資金: \t${Decimal(str(initial_capital)).quantize(CENTS, rounding=ROUND_HALF_UP):,}")
+    print(f"最終剩餘現金: \t${cash.quantize(CENTS, rounding=ROUND_HALF_UP):,}")
+    print(f"最終持股價值(成本): ${final_portfolio_value.quantize(CENTS, rounding=ROUND_HALF_UP):,}")
+    print(f"最終總結餘: \t${final_total_balance.quantize(CENTS, rounding=ROUND_HALF_UP):,}")
+    
+    return final_total_balance
+
+
+
+def simulate():
+    # 檔案路徑
+    file_path = 'output/best_strategy_trades.json'
+    # 初始資金
+    initial_capital = 10000.0
+    simulate_trades(file_path, initial_capital)  
 
 if __name__ == "__main__":
     main()

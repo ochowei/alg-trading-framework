@@ -107,18 +107,19 @@ class BollingerBandsMeanReversion(bt.Strategy):
         # 進場邏輯：價格跌破下軌且目前無倉位
         if  price < self.bot_band[0]:
             self.logger.debug(f"💡 {trade_date} | 價格 {price:.2f} 跌破下軌 {self.bot_band[0]:.2f} | 嘗試買入 | Size: {size}")
+            self.signal_list.append({ "date": f"{trade_date}", "action": 1, "size": size, "price": price, "total": -size * price })
+
             if not self.position:
-                self.signal_list.append({ "date": f"{trade_date}", "action": 1, "size": size, "price": price, "total": -size * price })
-                self.order = self.buy(size=size)                
+                self.order = self.buy(size=size,exectype=bt.Order.Limit, price=price) # 限價單買入              
                 self.last_trade_date = trade_date # 記錄交易日期
 
         # 出場邏輯：價格回升觸及中線且目前持有倉位
         elif price >= self.sma[0] :
             self.logger.debug(f"💡 {trade_date} | 價格 {price:.2f} 回到中線 {self.sma[0]:.2f} | 嘗試賣出 (平倉)")
-            
+            self.signal_list.append({ "date": f"{trade_date}", "action": -1, "size": size, "price": price, "total": size * price })
+
             if self.position:
-                self.signal_list.append({ "date": f"{trade_date}", "action": -1, "size": size, "price": price, "total": size * price })
-                self.order = self.close() # 平掉所有倉位
+                self.sell(exectype=bt.Order.Limit, price=price)
                 self.last_trade_date = trade_date # 記錄交易日期
 
     def notify_order(self, order):
@@ -138,9 +139,9 @@ class BollingerBandsMeanReversion(bt.Strategy):
             portfolio_value = self.broker.getvalue()
             pnl = order.executed.pnl
             if order.isbuy():
-                self.signal_list.append({ "date": f"{trade_date}", "action": 2, "size": size, "price": price, "total": -size * price, "pnl": pnl })
+                self.signal_list.append({ "date": f"{trade_date}", "action": 2, "size": size, "price": price, "total": -size * price, "pnl": pnl, "BB_Period": self.params.bb_period, "Dev_Factor": self.params.bb_devfactor })
             if order.issell():
-                self.signal_list.append({ "date": f"{trade_date}", "action": -2, "size": size, "price": price, "total": -size * price, "pnl": pnl })
+                self.signal_list.append({ "date": f"{trade_date}", "action": -2, "size": size, "price": price, "total": -size * price, "pnl": pnl,  "BB_Period": self.params.bb_period, "Dev_Factor": self.params.bb_devfactor })
 
             self.logger.debug(f"✅ {trade_date} | 交易完成 @ {price:.2f} | Size: {size}")
             log_action = "⬅️" if size < 0 else "➡️" # 視覺化買賣方向
