@@ -134,8 +134,8 @@ class BollingerBandsMeanReversion(bt.Strategy):
             
             if self.position:
                 self.signal_list.append({ "date": f"{trade_date}", "action": -1, "size": size, "price": price, "total": size * price })
-                if self.stop_loss_order:
-                    self.cancel(self.stop_loss_order)
+                # if self.stop_loss_order:
+                #     self.cancel(self.stop_loss_order)
                 self.sell(exectype=bt.Order.Limit, price=price, size=self.position.size)
                 self.last_trade_date = trade_date # 記錄交易日期
             else:
