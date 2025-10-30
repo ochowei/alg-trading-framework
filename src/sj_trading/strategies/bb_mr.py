@@ -133,7 +133,7 @@ class BollingerBandsMeanReversion(bt.Strategy):
             if self.position:
                 if self.stop_loss_order:
                     self.cancel(self.stop_loss_order)
-                self.sell(exectype=bt.Order.Limit, price=price)
+                self.sell(exectype=bt.Order.Limit, price=price, size=self.position.size)
                 self.last_trade_date = trade_date # 記錄交易日期
 
     def notify_order(self, order):
@@ -164,13 +164,13 @@ class BollingerBandsMeanReversion(bt.Strategy):
                 stop_price = 0
                 log_msg = ""
 
-                if self.params.stop_loss_atr_multiplier > 0:
-                    stop_price = price - self.atr[0] * self.params.stop_loss_atr_multiplier
-                    log_msg = f"ℹ️ 提交 ATR 停損單. 觸發價: {stop_price:.2f}"
+                # if self.params.stop_loss_atr_multiplier > 0:
+                #     stop_price = price - self.atr[0] * self.params.stop_loss_atr_multiplier
+                #     log_msg = f"ℹ️ 提交 ATR 停損單. 觸發價: {stop_price:.2f}"
 
-                # elif self.params.stop_loss_pct > 0:
-                #     stop_price = price * (1.0 - self.params.stop_loss_pct)
-                #     log_msg = f"ℹ️ 提交百分比停損單. 觸發價: {stop_price:.2f}"
+                if self.params.stop_loss_pct > 0:
+                    stop_price = price * (1.0 - self.params.stop_loss_pct)
+                    log_msg = f"ℹ️ 提交百分比停損單. 觸發價: {stop_price:.2f}"
 
                 if stop_price > 0:
                     self.stop_loss_order = self.sell(exectype=bt.Order.Stop, price=stop_price, size=size)
