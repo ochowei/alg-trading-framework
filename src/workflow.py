@@ -558,8 +558,8 @@ def simulate_trades(file_path, initial_capital):
                 cash_received = size_held * sell_price
                 cash += cash_received
                 
-                print(f"{date_str} [賣出] {ticker}:")
-                print(f"  > 賣出 {size_held:.4f} 股 @ ${sell_price:,.2f}，獲得 ${cash_received.quantize(CENTS, rounding=ROUND_HALF_UP):,}")
+                print(f"{date_str} [賣出完成] {ticker}:")
+                print(f"  > 賣出完成 {size_held:.4f} 股 @ ${sell_price:,.2f}，獲得 ${cash_received.quantize(CENTS, rounding=ROUND_HALF_UP):,}")
                 print(f"  > 目前現金: ${cash.quantize(CENTS, rounding=ROUND_HALF_UP):,}")
             # else:
                 # print(f"{date_str} [賣出訊號] {ticker}: 投資組合中無此股票，忽略。")
@@ -571,7 +571,7 @@ def simulate_trades(file_path, initial_capital):
         if num_buys > 0 and cash > Decimal('0.01'): # 確保有現金且有買入訊號
             cash_per_buy = cash / Decimal(num_buys)
             
-            print(f"{date_str} [買入訊號] {num_buys} 個。可用現金 ${cash.quantize(CENTS, rounding=ROUND_HALF_UP):,}，每個訊號分配 ${cash_per_buy.quantize(CENTS, rounding=ROUND_HALF_UP):,}")
+            print(f"{date_str} [買入完成] {num_buys} 個。可用現金 ${cash.quantize(CENTS, rounding=ROUND_HALF_UP):,}，每個訊號分配 ${cash_per_buy.quantize(CENTS, rounding=ROUND_HALF_UP):,}")
 
             current_cash_for_day = cash # 暫存當天一開始用於分配的現金
             cash = Decimal('0.0') # 先假設所有現金都分配出去
