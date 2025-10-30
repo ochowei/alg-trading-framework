@@ -178,6 +178,8 @@ def run_optimization_once(df:pd.DataFrame, ticker:str, strategy:bt.Strategy, pri
                 "annual_return": annualized_return,
                 "strat": strat
             }
+        
+
 
     # 顯示最佳策略結果
     if best_result is not None and best_performance != -float('inf'):
