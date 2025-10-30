@@ -379,10 +379,23 @@ def check_target():
     for x in result_list:
         print_backtest_result(level=logging.INFO, bt_result=x["bt_result"], num_transactions=5)
 
-def download_data():
+def download_data(start_date=None, end_date=None):
+    """
+    下載指定 Tickers 的歷史股價資料並存為 CSV。
+
+    Args:
+        start_date (str, optional): 開始日期 (YYYY-MM-DD)。預設為 1000 天前。
+        end_date (str, optional): 結束日期 (YYYY-MM-DD)。預設為 7 天後。
+    """
+    # 如果未提供日期，則使用預設值
+    if start_date is None:
+        start_date = (datetime.now() - timedelta(days=1000)).strftime('%Y-%m-%d')
+    if end_date is None:
+        end_date = (datetime.now() + timedelta(days=7)).strftime('%Y-%m-%d')
+
     all_tickers = set()
 
-    # 從新的 JSON 檔案讀取 Ticker
+    # 從 JSON 檔案讀取 Ticker
     try:
         with open('data/US_ticker_categories.json', 'r', encoding='utf-8') as f:
             ticker_categories = json.load(f)
@@ -396,42 +409,69 @@ def download_data():
         print("錯誤：無法解析 `data/US_ticker_categories.json`。")
         return
 
-    # 轉換為列表以供 yfinance 使用
     ticker_list = list(all_tickers)
-    
     if not ticker_list:
         print("沒有找到任何 Ticker，下載中止。")
         return
 
-    print(f"準備下載 {len(ticker_list)} 個不重複的 Ticker...")
+    print(f"準備下載 {len(ticker_list)} 個 Ticker，日期範圍: {start_date} 至 {end_date}...")
 
-    # 批次下載（預設為每日資料）
+    # 下載數據
     data = yf.download(
         tickers=ticker_list,
-        start="2025-06-01",
-        end=Config.ONE_WEEK_LATER.strftime('%Y-%m-%d'),
-        group_by='ticker',   # 會以股票代碼作為 key 分群
-        auto_adjust=True,     # 自動調整股價（考慮除權息等）
+        start=start_date,
+        end=end_date,
+        group_by='ticker',
+        auto_adjust=True,
         progress=True
     )
 
-    # 建立一個空的 DataFrame 用來合併資料
+    # 處理並合併數據
     combined_df = pd.DataFrame()
-
-    # 將每支股票的資料轉成長格式，並加入 Ticker 欄位
     for ticker in ticker_list:
         if ticker in data and not data[ticker].empty:
             df = data[ticker].copy()
             df['Ticker'] = ticker
-            df = df.reset_index()  # 把日期從 index 轉為欄位
+            df = df.reset_index()
             combined_df = pd.concat([combined_df, df], ignore_index=True)
         else:
-            print(f"警告：未下載到 {ticker} 的資料，可能已下市或代碼錯誤。")
+            print(f"警告：未下載到 {ticker} 的資料。")
 
-    # 儲存為單一 CSV
-    combined_df.to_csv(Config.YFINANCE_FILE_NAME, index=False)
+    # 儲存到 CSV
+    base_name, extension = os.path.splitext(Config.YFINANCE_FILE_NAME)
+    output_filename = f"{base_name}_{start_date}_{end_date}{extension}"
+    combined_df.to_csv(output_filename, index=False)
+    print(f"✅ 資料已成功儲存至 {output_filename}")
 
-    print(f"✅ 資料已儲存為 {Config.YFINANCE_FILE_NAME}")
+
+def download_data_cli():
+    """
+    為 download_data 提供命令列介面。
+    """
+    parser = argparse.ArgumentParser(description="下載 yfinance 股價資料")
+    parser.add_argument(
+        "--start-date",
+        type=str,
+        default=None,
+        help="下載開始日期 (格式: YYYY-MM-DD)。預設為 1000 天前。"
+    )
+    parser.add_argument(
+        "--end-date",
+        type=str,
+        default=None,
+        help="下載結束日期 (格式: YYYY-MM-DD)。預設為 7 天後。"
+    )
+    args = parser.parse_args()
+
+    # 驗證日期格式
+    for date_str in [args.start_date, args.end_date]:
+        if date_str:
+            try:
+                datetime.strptime(date_str, '%Y-%m-%d')
+            except ValueError:
+                parser.error(f"日期格式錯誤: {date_str}。請使用 YYYY-MM-DD 格式。")
+
+    download_data(start_date=args.start_date, end_date=args.end_date)
 
 def main():
     """
