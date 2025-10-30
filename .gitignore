@@ -162,7 +162,7 @@ cython_debug/
 #.idea/
 
 *.pfx
-combined_stock_data.csv
+combined_stock_data*.csv
 *.zip
 /output/
 /output/*.json
