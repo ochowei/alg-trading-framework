@@ -1,0 +1,16 @@
+{
+  "US_RARE_EARTH": ["MP", "UUUU", "UAMY"],
+  "US_DRONE": ["ONDS", "RCAT"],
+  "US_NUCLEAR": ["LEU", "SMR"],
+  "US_POWER": ["BE", "VST"],
+  "US_BETTERY": ["EOSE", "WWR"],
+  "US_AI_UP_1": ["AMD", "NVDA", "TSM"],
+  "US_AI_UP_2": ["ALAB", "NVTS", "POWI"],
+  "US_AI_MEDIUM": ["GOOG"],
+  "US_AI_DOWN_1": ["ADBE", "DUOL", "FIG"],
+  "US_AI_DOWN_2": ["GRAB", "RBRK"],
+  "US_OTHER_STABLE": ["CIFR", "SOFI", "IBIT"],
+  "US_OTHER_GROWTH": ["IONQ", "TMDX", "TSLA"],
+  "US_OTHER_ETF": ["BND", "GLD", "MGK", "SIVR", "VOO"],
+  "US_OTHER": []
+}
