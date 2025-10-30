@@ -1,3 +1,4 @@
+import argparse
 import backtrader as bt
 import shioaji as sj
 import pandas as pd
@@ -712,11 +713,39 @@ def simulate_trades(file_path, initial_capital, show_non_executed_orders=False):
 
 
 def simulate():
-    # 檔案路徑
-    file_path = 'output/best_strategy_trades.json'
-    # 初始資金
-    initial_capital = 10000.0
-    simulate_trades(file_path, initial_capital)  
+    """
+    從命令列執行交易模擬。
+    """
+    parser = argparse.ArgumentParser(description="根據 JSON 訊號檔案模擬交易")
+
+    parser.add_argument(
+        "--file-path",
+        type=str,
+        default='output/best_strategy_trades.json',
+        help="包含交易訊號的 JSON 檔案路徑 (預設: output/best_strategy_trades.json)"
+    )
+
+    parser.add_argument(
+        "--initial-capital",
+        type=float,
+        default=10000.0,
+        help="模擬的初始資金 (預設: 10000.0)"
+    )
+
+    parser.add_argument(
+        "--show-none-execute-order",
+        action='store_true',
+        help="如果設定此旗標，將會顯示 '無執行' 的買入/賣出訊號 (action 3, -3)。"
+    )
+
+    args = parser.parse_args()
+
+    # 呼叫 simulate_trades 並傳入所有來自命令列的參數
+    simulate_trades(
+        file_path=args.file_path,
+        initial_capital=args.initial_capital,
+        show_non_executed_orders=args.show_none_execute_order
+    )
 
 if __name__ == "__main__":
     main()
