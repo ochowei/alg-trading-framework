@@ -61,6 +61,7 @@ class BollingerBandsMeanReversion(bt.Strategy):
     def next(self):
         trade_date = self.datas[0].datetime.date(0)
         price = self.data.close[0]
+        high = self.data.high[0]
         cash = self.broker.get_cash()
         portfolio_value = self.broker.getvalue()
 
@@ -122,7 +123,7 @@ class BollingerBandsMeanReversion(bt.Strategy):
 
             if not self.position:
                 self.signal_list.append({ "date": f"{trade_date}", "action": 1, "size": size, "price": price, "total": -size * price })
-                self.order = self.buy(size=size,exectype=bt.Order.Limit, price=price) # 限價單買入              
+                self.order = self.buy(size=size,exectype=bt.Order.Limit, price=(price+high)/2) # 限價單買入              
                 self.last_trade_date = trade_date # 記錄交易日期
             else:
                 self.signal_list.append({ "date": f"{trade_date}", "action": 3, "size": size, "price": price, "total": -size * price })
