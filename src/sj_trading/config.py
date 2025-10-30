@@ -38,6 +38,8 @@ class Config:
         "bb_period":  range(5,31,5),
         "bb_devfactor":  [1.2,1.4,1.6,1.8, 2.0, 2.2],
         "risk": [0.9],
+        "stop_loss_atr_multiplier": [0, 1.5, 2.0, 2.5],
+        "stop_loss_pct": [0],
     }
 
     OPT_PARAMETERS_RSI_MR = {

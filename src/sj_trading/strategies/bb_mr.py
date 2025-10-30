@@ -23,6 +23,8 @@ class BollingerBandsMeanReversion(bt.Strategy):
         ("start_date", datetime(2025, 6, 1)),
         ("end_date", None),
         ("skip_dates", []),
+        ("stop_loss_atr_multiplier", 0),
+        ("stop_loss_pct", 0),
     )
 
     def __init__(self):
@@ -47,6 +49,7 @@ class BollingerBandsMeanReversion(bt.Strategy):
 
         # 策略狀態變數
         self.order = None # 用於追蹤待處理訂單
+        self.stop_loss_order = None # 用於追蹤停損單
         self.last_trade_date = None # 避免當沖
         self.total_commission = 0 # 累計交易成本
         self.signal_list = []
@@ -128,6 +131,8 @@ class BollingerBandsMeanReversion(bt.Strategy):
             self.signal_list.append({ "date": f"{trade_date}", "action": -1, "size": size, "price": price, "total": size * price })
 
             if self.position:
+                if self.stop_loss_order:
+                    self.cancel(self.stop_loss_order)
                 self.sell(exectype=bt.Order.Limit, price=price)
                 self.last_trade_date = trade_date # 記錄交易日期
 
@@ -147,20 +152,39 @@ class BollingerBandsMeanReversion(bt.Strategy):
             cash_remain = self.broker.get_cash()
             portfolio_value = self.broker.getvalue()
             pnl = order.executed.pnl
-            if order.isbuy():
-                self.signal_list.append({ "date": f"{trade_date}", "action": 2, "size": size, "price": price, "total": -size * price, "pnl": pnl, "BB_Period": self.params.bb_period, "Dev_Factor": self.params.bb_devfactor })
-            if order.issell():
-                self.signal_list.append({ "date": f"{trade_date}", "action": -2, "size": size, "price": price, "total": -size * price, "pnl": pnl,  "BB_Period": self.params.bb_period, "Dev_Factor": self.params.bb_devfactor })
 
             self.logger.debug(f"✅ {trade_date} | 交易完成 @ {price:.2f} | Size: {size}")
             log_action = "⬅️" if size < 0 else "➡️" # 視覺化買賣方向
             self.logger.debug(f"   {log_action} 交易金額: {cost:.2f} | PnL: {pnl:.2f} | 交易成本: {commission:.2f}")
             self.logger.debug(f"   💰 現金餘額: {cash_remain:.2f} | 總資產: {portfolio_value:.2f}")
-            self.order = None # 訂單完成，清除追蹤
+            self.order = None
+
+            if order.isbuy():
+                self.signal_list.append({ "date": f"{trade_date}", "action": 2, "size": size, "price": price, "total": -size * price, "pnl": pnl, "BB_Period": self.params.bb_period, "Dev_Factor": self.params.bb_devfactor })
+                stop_price = 0
+                log_msg = ""
+
+                if self.params.stop_loss_atr_multiplier > 0:
+                    stop_price = price - self.atr[0] * self.params.stop_loss_atr_multiplier
+                    log_msg = f"ℹ️ 提交 ATR 停損單. 觸發價: {stop_price:.2f}"
+
+                # elif self.params.stop_loss_pct > 0:
+                #     stop_price = price * (1.0 - self.params.stop_loss_pct)
+                #     log_msg = f"ℹ️ 提交百分比停損單. 觸發價: {stop_price:.2f}"
+
+                if stop_price > 0:
+                    self.stop_loss_order = self.sell(exectype=bt.Order.Stop, price=stop_price, size=size)
+                    self.logger.debug(log_msg)
+
+            elif order.issell():
+                self.signal_list.append({ "date": f"{trade_date}", "action": -2, "size": size, "price": price, "total": -size * price, "pnl": pnl,  "BB_Period": self.params.bb_period, "Dev_Factor": self.params.bb_devfactor })
+                self.stop_loss_order = None
 
         elif order.status in [order.Canceled, order.Margin, order.Rejected]:
             self.logger.warning(f"⚠️ {trade_date} | 訂單未能完成 | Status: {status}")
-            self.order = None # 訂單失敗，清除追蹤
+            if self.stop_loss_order and self.stop_loss_order.ref == order.ref:
+                self.stop_loss_order = None
+            self.order = None
 
     def stop(self):
         final_value = self.broker.getvalue()
