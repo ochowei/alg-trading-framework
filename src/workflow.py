@@ -20,7 +20,7 @@ from sj_trading.strategies.bb_mr import BollingerBandsMeanReversion
 from sj_trading.analyzers import HoldingPeriodAnalyzer
 from sj_trading.commissions import TaiwanStockCommission
 
-from decimal import Decimal, ROUND_HALF_UP
+from decimal import Decimal, ROUND_HALF_UP, ROUND_FLOOR
 
 
 # 參數優化
@@ -585,16 +585,24 @@ def simulate_trades(file_path, initial_capital):
                 buy_price = Decimal(str(row['price']))
 
                 if buy_price > 0 and cash_per_buy > 0:
-                    # 分配的現金即為此次購買的成本
-                    cost_of_buy = cash_per_buy
-                    size_to_buy = cost_of_buy / buy_price # 計算可購買的股數（可以是小數）
+                    # 根據分配的現金，計算可負擔的整數股數 (無條件捨去)
+                    size_to_buy = (cash_per_buy / buy_price).to_integral_value(rounding=ROUND_FLOOR)
+
+                    # 根據整數股數計算實際成本
+                    actual_cost_of_buy = size_to_buy * buy_price
+
+                    # 計算此筆分配中未花費的餘額
+                    unspent_cash = cash_per_buy - actual_cost_of_buy
+
+                    # 將未花費的餘額加回主現金池
+                    cash += unspent_cash
                     
                     if ticker in portfolio:
                         # 已持有，加倉並計算平均成本
                         old_size = portfolio[ticker]['size']
                         old_total_cost = portfolio[ticker]['total_cost']
                         
-                        new_total_cost = old_total_cost + cost_of_buy
+                        new_total_cost = old_total_cost + actual_cost_of_buy
                         new_size = old_size + size_to_buy
                         new_cost_basis = new_total_cost / new_size
                         
@@ -603,7 +611,7 @@ def simulate_trades(file_path, initial_capital):
                             'cost_basis': new_cost_basis,
                             'total_cost': new_total_cost
                         }
-                        print(f"  > [加倉完成] {ticker}: 投入 ${cost_of_buy.quantize(CENTS, rounding=ROUND_HALF_UP):,} 購買 {size_to_buy:.4f} 股 @ ${buy_price:,.2f}。")
+                        print(f"  > [加倉完成] {ticker}: 投入 ${actual_cost_of_buy.quantize(CENTS, rounding=ROUND_HALF_UP):,} 購買 {size_to_buy:.4f} 股 @ ${buy_price:,.2f}。")
                         print(f"    > 新均價: ${new_cost_basis.quantize(CENTS, rounding=ROUND_HALF_UP):,}，新持有: {new_size:.4f} 股")
 
                     else:
@@ -611,9 +619,9 @@ def simulate_trades(file_path, initial_capital):
                         portfolio[ticker] = {
                             'size': size_to_buy, 
                             'cost_basis': buy_price,
-                            'total_cost': cost_of_buy
+                            'total_cost': actual_cost_of_buy
                         }
-                        print(f"  > [買入完成] {ticker}: 投入 ${cost_of_buy.quantize(CENTS, rounding=ROUND_HALF_UP):,} 購買 {size_to_buy:.4f} 股 @ ${buy_price:,.2f}。")
+                        print(f"  > [買入完成] {ticker}: 投入 ${actual_cost_of_buy.quantize(CENTS, rounding=ROUND_HALF_UP):,} 購買 {size_to_buy:.4f} 股 @ ${buy_price:,.2f}。")
             
             # 如果當天分配後有剩餘（例如 num_buys=0 但 cash>0），則加回
             # 在這個邏輯中，cash 在分配時已設為 0，所以買入後現金必為 0
@@ -652,9 +660,9 @@ def simulate_trades(file_path, initial_capital):
 
                 if buy_price > 0:
                     # 分配的現金即為此次購買的成本
-                    cost_of_buy = cash_per_buy
-                    size_to_buy = cost_of_buy / buy_price # 計算可購買的股數（可以是小數）
-                    print(f"  > [買入訊號] {ticker}: 投入 ${cost_of_buy.quantize(CENTS, rounding=ROUND_HALF_UP):,} 購買 {size_to_buy:.4f} 股 @ ${buy_price:,.2f}。")
+                    size_to_buy = (cash_per_buy / buy_price).to_integral_value(rounding=ROUND_FLOOR)
+                    actual_cost_of_buy = size_to_buy * buy_price
+                    print(f"  > [買入訊號] {ticker}: 投入 ${actual_cost_of_buy.quantize(CENTS, rounding=ROUND_HALF_UP):,} 購買 {size_to_buy:.4f} 股 @ ${buy_price:,.2f}。")
     
         # Settle funds from today's sales for use on the next day
         cash += pending_settlement
