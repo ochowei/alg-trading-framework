@@ -495,7 +495,7 @@ def main():
 
 
 
-def simulate_trades(file_path, initial_capital):
+def simulate_trades(file_path, initial_capital, show_non_executed_orders=False):
     """
     根據用戶指定的規則模擬交易。
 
@@ -642,9 +642,17 @@ def simulate_trades(file_path, initial_capital):
                 print(f"{date_str} [賣出訊號] {ticker}:")
                 print(f"  > 賣出訊號 {size_held:.4f} 股 @ ${sell_price:,.2f}，獲得 ${cash_received.quantize(CENTS, rounding=ROUND_HALF_UP):,}")
                 
-            # else:
-                # print(f"{date_str} [賣出訊號] {ticker}: 投資組合中無此股票，忽略。")
-
+            else:
+                print(f"{date_str} [賣出訊號] {ticker}: 投資組合中無此股票，忽略。")
+        if show_non_executed_orders:
+            sell_signals = day_trades[day_trades['action'] == -3]
+            for _, row in sell_signals.iterrows():
+                ticker = row['ticker']
+                sell_price = Decimal(str(row['price']))            
+                print(f"{date_str} [無執行賣出訊號] {ticker}: ${sell_price:,.2f}")
+                
+                
+            
         # --- 處理當天的所有買入訊號 (action == 1) ---
         buys_signals = day_trades[day_trades['action'] == 1]
         num_buysignals = len(buys_signals)
@@ -663,7 +671,14 @@ def simulate_trades(file_path, initial_capital):
                     size_to_buy = (cash_per_buy / buy_price).to_integral_value(rounding=ROUND_FLOOR)
                     actual_cost_of_buy = size_to_buy * buy_price
                     print(f"  > [買入訊號] {ticker}: 投入 ${actual_cost_of_buy.quantize(CENTS, rounding=ROUND_HALF_UP):,} 購買 {size_to_buy:.0f} 股 @ ${buy_price:,.2f}。")
-    
+
+        if show_non_executed_orders:
+            buys_signals = day_trades[day_trades['action'] == 3]
+            for _, row in buys_signals.iterrows():
+                ticker = row['ticker']
+                buy_price = Decimal(str(row['price']))            
+                print(f"{date_str} [無執行買入訊號] {ticker}: ${buy_price:,.2f}")
+
         # Settle funds from today's sales for use on the next day
         cash += pending_settlement
 
