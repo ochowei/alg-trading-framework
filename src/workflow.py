@@ -438,8 +438,10 @@ def download_data(start_date=None, end_date=None):
             print(f"警告：未下載到 {ticker} 的資料。")
 
     # 儲存到 CSV
-    combined_df.to_csv(Config.YFINANCE_FILE_NAME, index=False)
-    print(f"✅ 資料已成功儲存至 {Config.YFINANCE_FILE_NAME}")
+    base_name, extension = os.path.splitext(Config.YFINANCE_FILE_NAME)
+    output_filename = f"{base_name}_{start_date}_{end_date}{extension}"
+    combined_df.to_csv(output_filename, index=False)
+    print(f"✅ 資料已成功儲存至 {output_filename}")
 
 
 def download_data_cli():
