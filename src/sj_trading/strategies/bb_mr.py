@@ -1,6 +1,6 @@
 import backtrader as bt
 from datetime import datetime
-from sj_trading.logger import init_logger
+from sj_trading.logger import init_logger, close_logger
 
 class BollingerBandsMeanReversion(bt.Strategy):
     """
@@ -169,3 +169,4 @@ class BollingerBandsMeanReversion(bt.Strategy):
         self.logger.debug(f"🔹 總手續費支出: {self.total_commission:.2f}")
         self.logger.debug(f"🔹 使用參數: BB Period={self.params.bb_period}, DevFactor={self.params.bb_devfactor}, Risk={self.params.risk}")
         self.logger.debug("="*50)
+        close_logger(self.logger)

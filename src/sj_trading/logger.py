@@ -21,5 +21,20 @@ def init_logger(filename, mode='w'):
         file_handler.setLevel(logging.DEBUG)
         file_handler.setFormatter(formatter)
         logger.addHandler(file_handler)
+        
+
+    
 
     return logger
+
+def close_logger(logger_or_name):
+    """
+    Flushes and closes all handlers for a given logger.
+    """
+    if isinstance(logger_or_name, str):
+        logger = logging.getLogger(logger_or_name)
+    else:
+        logger = logger_or_name
+    for handler in logger.handlers[:]:
+        handler.close()
+        logger.removeHandler(handler)
