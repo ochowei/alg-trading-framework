@@ -10,12 +10,10 @@ class Config:
 
     # 常量
     PERFORMANCE_TARGET = "sharpe"
-    ETF_FILE_NAME = "data/US.json"
     YFINANCE_FILE_NAME = "combined_stock_data.csv"
 
     # 監控清單
     WATCH_TARGETS = []
-    SPECIAL_TARGETS = []
 
     OPT_PARAMETERS_TUTLE_4_1 = {
         "start_date": ONE_THOUSAND_DAYS_AGO,

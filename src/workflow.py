@@ -380,21 +380,34 @@ def check_target():
         print_backtest_result(level=logging.INFO, bt_result=x["bt_result"], num_transactions=5)
 
 def download_data():
-    etf_codes = []
+    all_tickers = set()
 
-    with open(Config.ETF_FILE_NAME, 'r', encoding='utf-8') as f:
-        data = json.load(f)
-        for etf in data:
-            code = etf["基金代號"]
-            # concat code with .TW
-            etf_codes.append(f"{code}")
+    # 從新的 JSON 檔案讀取 Ticker
+    try:
+        with open('data/US_ticker_categories.json', 'r', encoding='utf-8') as f:
+            ticker_categories = json.load(f)
+            for category in ticker_categories.values():
+                for ticker in category:
+                    all_tickers.add(ticker)
+    except FileNotFoundError:
+        print("錯誤：`data/US_ticker_categories.json` 檔案不存在。")
+        return
+    except json.JSONDecodeError:
+        print("錯誤：無法解析 `data/US_ticker_categories.json`。")
+        return
+
+    # 轉換為列表以供 yfinance 使用
+    ticker_list = list(all_tickers)
     
-    for ticker in Config.SPECIAL_TARGETS:
-        etf_codes.append(ticker)
+    if not ticker_list:
+        print("沒有找到任何 Ticker，下載中止。")
+        return
+
+    print(f"準備下載 {len(ticker_list)} 個不重複的 Ticker...")
 
     # 批次下載（預設為每日資料）
     data = yf.download(
-        tickers=etf_codes,
+        tickers=ticker_list,
         start="2025-06-01",
         end=Config.ONE_WEEK_LATER.strftime('%Y-%m-%d'),
         group_by='ticker',   # 會以股票代碼作為 key 分群
@@ -406,11 +419,14 @@ def download_data():
     combined_df = pd.DataFrame()
 
     # 將每支股票的資料轉成長格式，並加入 Ticker 欄位
-    for ticker in etf_codes:
-        df = data[ticker].copy()
-        df['Ticker'] = ticker
-        df = df.reset_index()  # 把日期從 index 轉為欄位
-        combined_df = pd.concat([combined_df, df], ignore_index=True)
+    for ticker in ticker_list:
+        if ticker in data and not data[ticker].empty:
+            df = data[ticker].copy()
+            df['Ticker'] = ticker
+            df = df.reset_index()  # 把日期從 index 轉為欄位
+            combined_df = pd.concat([combined_df, df], ignore_index=True)
+        else:
+            print(f"警告：未下載到 {ticker} 的資料，可能已下市或代碼錯誤。")
 
     # 儲存為單一 CSV
     combined_df.to_csv(Config.YFINANCE_FILE_NAME, index=False)
