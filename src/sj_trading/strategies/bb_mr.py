@@ -14,14 +14,15 @@ class BollingerBandsMeanReversion(bt.Strategy):
     """
 
     params = (
-        ("bb_period", 20),         # 布林通道週期
-        ("bb_devfactor", 2.0),     # 布林通道標準差倍數
-        ("atr_period", 14),        # ATR 週期，用於計算倉位
-        ("risk", 0.1),            # 單筆交易最大風險比例 (例如 0.02 代表 2%)
-        ("max_position_ratio", 0.99), # 最大倉位佔總資金比例 (例如 0.9 代表 90%)
-        ("stock_id", "STOCK.TW"),  # 股票代號 (用於日誌檔名)
-        ("start_date", datetime(2025, 6, 1)), # 只在此日期之後交易
-        ("skip_dates", []),        # 這些日期不交易 (datetime.date 物件列表)
+        ("bb_period", 20),
+        ("bb_devfactor", 2.0),
+        ("atr_period", 14),
+        ("risk", 0.1),
+        ("max_position_ratio", 0.99),
+        ("stock_id", "STOCK.TW"),
+        ("start_date", datetime(2025, 6, 1)),
+        ("end_date", None),
+        ("skip_dates", []),
     )
 
     def __init__(self):
@@ -31,6 +32,10 @@ class BollingerBandsMeanReversion(bt.Strategy):
         log_filename = f"{stock_id}/bb_mean_reversion_{bb_period}_{bb_devfactor}.log"
         self.logger = init_logger(log_filename, mode='w') # 使用 'w' 覆寫模式開始新回測紀錄
         self.logger.debug(f"🔹 回測開始 | 版本: BB Mean Reversion v1.0 | stock_id: {stock_id} | BB Period: {bb_period}, DevFactor: {bb_devfactor}, Risk: {self.params.risk}")
+        if self.params.end_date:
+            self.logger.debug(f"🔹 交易區間: {self.params.start_date.date()} 至 {self.params.end_date.date()}")
+        else:
+            self.logger.debug(f"🔹 交易區間: {self.params.start_date.date()} 至 無限制")
 
         # 指標定義
         self.bollinger = bt.indicators.BollingerBands(
@@ -59,6 +64,10 @@ class BollingerBandsMeanReversion(bt.Strategy):
         # --- 過濾條件 ---
         # 1. 只在 start_date 之後交易
         if trade_date < self.params.start_date.date():
+            return
+
+        # 1.b (新增) 只在 end_date 之前交易
+        if self.params.end_date and trade_date > self.params.end_date.date():
             return
 
         # 2. 跳過指定日期

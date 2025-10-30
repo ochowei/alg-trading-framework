@@ -164,3 +164,4 @@ cython_debug/
 *.pfx
 combined_stock_data.csv
 *.zip
+/output/
