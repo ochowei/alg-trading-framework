@@ -246,7 +246,7 @@ def print_backtest_result(bt_result, num_transactions: int, level=logging.INFO, 
 
 import argparse
 
-def lookup_target(filename: str = Config.YFINANCE_FILE_NAME):
+def opt_strategy(filename: str = Config.YFINANCE_FILE_NAME):
     dataframe =  Dataloader.read_csv(filename)
     if dataframe.empty:
         print(f"無法從 {filename} 讀取到數據，lookup_target 中止。")
@@ -491,7 +491,7 @@ def main():
 
     print(f"🔄 開始執行 lookup_target，使用資料檔案: {args.filename}")
 
-    lookup_target(filename=args.filename)
+    opt_strategy(filename=args.filename)
 
 
 
