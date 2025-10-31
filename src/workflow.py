@@ -268,6 +268,7 @@ def lookup_target(filename: str = Config.YFINANCE_FILE_NAME):
     errors = []
     watch_list = []
     all_best_trades = []
+    all_best_params = []
     
     for ticker in target_list:
         print(f"開始優化 {ticker} 的策略參數")
@@ -290,6 +291,19 @@ def lookup_target(filename: str = Config.YFINANCE_FILE_NAME):
 
             if cumulative_return <= 0:
                 continue
+
+            # 提取參數並處理 datetime
+            params = best_result["strat"].params._getkwargs()
+            for key, value in params.items():
+                if isinstance(value, datetime):
+                    params[key] = value.isoformat()
+
+            # 儲存最佳參數
+            all_best_params.append({
+                "ticker": ticker,
+                "strategy": opt_strategy.__name__,
+                "parameters": params
+            })
 
             strat = best_result["strat"]
             if strat.signal_list:
@@ -320,6 +334,12 @@ def lookup_target(filename: str = Config.YFINANCE_FILE_NAME):
         json.dump(all_best_trades, f, ensure_ascii=False, indent=2)
     
     print(f"✅ 最佳策略的交易紀錄已匯出至 {output_file}")
+
+    # Write params to JSON file
+    params_output_file = output_dir / "best_strategy_params.json"
+    with open(params_output_file, 'w', encoding='utf-8') as f:
+        json.dump(all_best_params, f, ensure_ascii=False, indent=2)
+    print(f"✅ 最佳策略的參數已匯出至 {params_output_file}")
     sum_of_pnl = 0
     for x in all_best_trades:
         if 'pnl' in x:
