@@ -465,6 +465,164 @@ def download_data(start_date=None, end_date=None):
     print(f"✅ 資料已成功儲存至 {output_filename}")
 
 
+def run_strategy_once(df: pd.DataFrame, ticker: str, strategy_class: bt.Strategy, strategy_params: dict):
+    """
+    執行單次回測並返回交易訊號。
+
+    Args:
+        df (pd.DataFrame): 包含所有股票數據的 DataFrame。
+        ticker (str): 要回測的股票代號。
+        strategy_class (bt.Strategy): 要使用的策略類別。
+        strategy_params (dict): 策略的參數。
+
+    Returns:
+        list: 包含交易訊號的列表 (signal_list)，如果沒有訊號則返回空列表。
+    """
+    cerebro = bt.Cerebro()
+
+    # 載入特定 ticker 的數據
+    data = Dataloader.from_csv_df(df=df, symbol=ticker)
+    if data is None:
+        print(f"警告：找不到 {ticker} 的數據，跳過此回測。")
+        return []
+
+    cerebro.adddata(data)
+    cerebro.broker.setcash(100000)
+    cerebro.broker.addcommissioninfo(TaiwanStockCommission())
+
+    # 使用 addstrategy 進行單次回測
+    cerebro.addstrategy(strategy_class, **strategy_params)
+
+    # 加入分析器
+    cerebro.addanalyzer(bt.analyzers.Transactions, _name='transactions')
+    cerebro.addanalyzer(bt.analyzers.TimeReturn, _name='timereturn')
+    # 加入 BB_MR 策略可能需要的其他分析器 (參考 run_optimization_once)
+    cerebro.addanalyzer(bt.analyzers.SharpeRatio, _name='sharpe', timeframe=bt.TimeFrame.Days, riskfreerate=0.01)
+    cerebro.addanalyzer(bt.analyzers.DrawDown, _name='drawdown')
+    cerebro.addanalyzer(bt.analyzers.TradeAnalyzer, _name='trade')
+    cerebro.addanalyzer(HoldingPeriodAnalyzer, _name='holdings')
+
+    # 執行回測
+    results = cerebro.run()
+    strat = results[0]
+
+    # 從策略實例中提取 signal_list
+    if hasattr(strat, 'signal_list'):
+        return strat.signal_list
+    else:
+        return []
+
+
+def run_strategy_cli():
+    """
+    從命令列執行策略回測並儲存交易訊號。
+    """
+    parser = argparse.ArgumentParser(description="根據 JSON 檔案執行策略並儲存交易訊號")
+
+    parser.add_argument(
+        "--data-file",
+        type=str,
+        default=Config.YFINANCE_FILE_NAME,
+        help=f"CSV 資料檔案路徑 (預設: {Config.YFINANCE_FILE_NAME})"
+    )
+    parser.add_argument(
+        "--input-file",
+        type=str,
+        default="output/best_strategy_params.json",
+        help="包含策略參數的 JSON 檔案路徑 (預設: output/best_strategy_params.json)"
+    )
+    parser.add_argument(
+        "--output-file",
+        type=str,
+        default="output/strategy_trades.json",
+        help="儲存交易訊號的 JSON 輸出檔案路徑 (預設: output/strategy_trades.json)"
+    )
+    parser.add_argument("--start-date", type=str, default=None, help="覆寫所有策略的開始日期 (YYYY-MM-DD)")
+    parser.add_argument("--end-date", type=str, default=None, help="覆寫所有策略的結束日期 (YYYY-MM-DD)")
+    parser.add_argument("--skip-dates", type=str, default=None, help="覆寫所有策略的跳過日期 (YYYY-MM-DD,YYYY-MM-DD)")
+
+    args = parser.parse_args()
+
+    # 1. 讀取資料
+    df_data = Dataloader.read_csv(args.data_file)
+    if df_data.empty:
+        print(f"錯誤：無法從 {args.data_file} 讀取資料。")
+        return
+
+    # 2. 讀取策略設定
+    try:
+        with open(args.input_file, 'r', encoding='utf-8') as f:
+            strategy_configs = json.load(f)
+    except FileNotFoundError:
+        print(f"錯誤：找不到輸入檔案 {args.input_file}。")
+        return
+    except json.JSONDecodeError:
+        print(f"錯誤：無法解析 JSON 檔案 {args.input_file}。")
+        return
+
+    # 3. 策略名稱到類別的對應
+    strategy_map = {
+        "BollingerBandsMeanReversion": BollingerBandsMeanReversion,
+        # 在此處加入其他策略
+    }
+
+    all_trades = []
+    # 4. 遍歷設定並執行策略
+    for config in strategy_configs:
+        ticker = config.get("ticker")
+        strategy_name = config.get("strategy")
+        parameters = config.get("parameters", {})
+
+        if not all([ticker, strategy_name, parameters]):
+            print(f"警告：跳過無效的設定項目：{config}")
+            continue
+
+        strategy_class = strategy_map.get(strategy_name)
+        if not strategy_class:
+            print(f"警告：找不到名為 '{strategy_name}' 的策略，跳過 {ticker}。")
+            continue
+
+        # 5. 參數覆寫
+        if args.start_date:
+            parameters['start_date'] = args.start_date
+        if args.end_date:
+            parameters['end_date'] = args.end_date
+        if args.skip_dates:
+            parameters['skip_dates'] = args.skip_dates.split(',')
+
+        # 將字串日期轉換為 datetime 物件
+        for key in ['start_date', 'end_date']:
+            if key in parameters and isinstance(parameters[key], str):
+                try:
+                    parameters[key] = datetime.fromisoformat(parameters[key])
+                except ValueError:
+                    print(f"警告：{ticker} 的 {key} 日期格式錯誤，將使用預設值。")
+                    parameters.pop(key, None)
+
+        print(f"正在為 {ticker} 執行策略 {strategy_name}...")
+
+        # 6. 執行單次回測
+        signal_list = run_strategy_once(df_data, ticker, strategy_class, parameters)
+
+        if signal_list:
+            all_trades.extend(signal_list)
+
+    # 7. 排序並儲存結果
+    if all_trades:
+        all_trades.sort(key=lambda x: x['date'])
+
+        # 確保輸出目錄存在
+        output_dir = Path(args.output_file).parent
+        output_dir.mkdir(parents=True, exist_ok=True)
+
+        with open(args.output_file, 'w', encoding='utf-8') as f:
+            json.dump(all_trades, f, ensure_ascii=False, indent=2)
+
+        print(f"✅ 策略執行完畢，共產生 {len(all_trades)} 筆交易訊號，已儲存至 {args.output_file}")
+    else:
+        print("所有策略執行完畢，沒有產生任何交易訊號。")
+
+
 def download_data_cli():
     """
     為 download_data 提供命令列介面。

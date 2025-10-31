@@ -27,6 +27,7 @@ lookup_target = "workflow:main"
 simulate = "workflow:simulate"
 check_target = "workflow:check_target"
 download_data = "workflow:download_data_cli"
+run_strategy = "workflow:run_strategy_cli"
 generate_google_query = "generate_query:main"
 zip = "zip:zip_project_folder"
 
