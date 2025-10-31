@@ -2,9 +2,7 @@
   "name": "My Python Project",
   "image": "mcr.microsoft.com/devcontainers/python:3.11",
 
-  // --- 在這裡加入 "features" 區塊 ---
-  "features": {
-    "ghcr.io/astral-sh/devcontainer-features/uv:latest": {}
-  }
+  // --- 在這裡加入 "postCreateCommand" ---
+  "postCreateCommand": "curl -LsSf https://astral.sh/uv/install.sh | sh"
   // --- ---
 }
