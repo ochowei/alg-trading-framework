@@ -198,6 +198,36 @@ def run_optimization_once(df:pd.DataFrame, ticker:str, strategy:bt.Strategy, pri
 
 from sj_trading.logger import init_logger
 
+def run_strategy_once(df: pd.DataFrame, ticker: str, strategy_class: bt.Strategy, strategy_params: dict):
+    """
+    執行單次回測，而非參數優化。
+    """
+    cerebro = bt.Cerebro()
+
+    # 從 strategy_params 提取 start_date 和 end_date
+    start_date = strategy_params.get('start_date', Config.ONE_THOUSAND_DAYS_AGO.strftime('%Y-%m-%d'))
+    end_date = strategy_params.get('end_date', Config.ONE_WEEK_LATER.strftime('%Y-%m-%d'))
+
+    data = Dataloader.from_csv_df(df=df, symbol=ticker, start=start_date, end=end_date)
+    if data is None:
+        print(f"股票代號: {ticker} 在指定日期範圍內沒有數據")
+        return []
+
+    cerebro.adddata(data)
+    cerebro.broker.setcash(100000)
+    cerebro.broker.addcommissioninfo(TaiwanStockCommission())
+
+    # 使用 addstrategy，傳入單一參數組合
+    cerebro.addstrategy(strategy_class, **strategy_params)
+
+    # 執行回測
+    results = cerebro.run()
+    strat = results[0]
+
+    # 返回 signal_list
+    return strat.signal_list if hasattr(strat, 'signal_list') else []
+
+
 def print_backtest_result(bt_result, num_transactions: int, level=logging.INFO, filename="backtrader.log"):
     strat = bt_result["strat"]
     transactions = strat.analyzers.transactions.get_analysis()
@@ -354,6 +384,88 @@ def lookup_target(filename: str = Config.YFINANCE_FILE_NAME):
     for x in watch_list:
         print_backtest_result(level=logging.INFO, bt_result=x["bt_result"], num_transactions=5)
 
+def run_strategy(args):
+    """
+    使用給定的參數檔案執行策略並產生交易訊號。
+    """
+    # 1. 讀取主資料來源 CSV
+    dataframe = Dataloader.read_csv(args.data_file)
+    if dataframe.empty:
+        print(f"無法從 {args.data_file} 讀取到數據，run_strategy 中止。")
+        return
+
+    # 2. 讀取策略參數 JSON 檔案
+    try:
+        with open(args.input_file, 'r', encoding='utf-8') as f:
+            strategy_configs = json.load(f)
+    except FileNotFoundError:
+        print(f"錯誤：找不到輸入檔案 {args.input_file}")
+        return
+    except json.JSONDecodeError:
+        print(f"錯誤：無法解析 JSON 檔案 {args.input_file}")
+        return
+
+    # 3. 初始化列表
+    all_trades = []
+
+    # 4. 建立策略對應表
+    strategy_map = {
+        "BollingerBandsMeanReversion": BollingerBandsMeanReversion,
+        "Turtle_v4_1": Turtle_v4_1,
+        "Turtle_v4_1_1": Turtle_v4_1_1,
+        "RsiMeanReversion": RsiMeanReversion
+    }
+
+    # 5. 遍歷設定檔
+    for config in strategy_configs:
+        ticker = config.get("ticker")
+        strategy_name = config.get("strategy")
+        parameters = config.get("parameters", {})
+
+        if not all([ticker, strategy_name, parameters]):
+            print(f"警告：跳過無效的設定檔項目：{config}")
+            continue
+
+        strategy_class = strategy_map.get(strategy_name)
+        if not strategy_class:
+            print(f"警告：找不到名為 '{strategy_name}' 的策略，跳過 {ticker}")
+            continue
+
+        print(f"正在為 {ticker} 執行策略 {strategy_name}...")
+
+        # 6. 參數覆寫
+        if args.start_date:
+            parameters['start_date'] = args.start_date
+        if args.end_date:
+            parameters['end_date'] = args.end_date
+        if args.skip_dates:
+            parameters['skip_dates'] = args.skip_dates
+
+        # 7. 呼叫 run_strategy_once
+        signal_list = run_strategy_once(dataframe, ticker, strategy_class, parameters)
+
+        if signal_list:
+            # 將 ticker 加入每個交易訊號中
+            for trade in signal_list:
+                trade['ticker'] = ticker
+            all_trades.extend(signal_list)
+            print(f"  > 為 {ticker} 產生了 {len(signal_list)} 個交易訊號。")
+        else:
+            print(f"  > {ticker} 沒有產生任何交易訊號。")
+
+    # 8. 排序交易
+    if all_trades:
+        all_trades.sort(key=lambda x: x['date'])
+
+    # 9. 儲存到輸出檔案
+    output_dir = Path(os.path.dirname(args.output_file))
+    output_dir.mkdir(exist_ok=True)
+    with open(args.output_file, 'w', encoding='utf-8') as f:
+        json.dump(all_trades, f, ensure_ascii=False, indent=2)
+
+    print(f"\n✅ 所有策略的交易訊號已成功匯總並儲存至 {args.output_file}")
+
+
 def check_target():
     logger = init_logger("backtrader.log")
     dataframe =  Dataloader.read_csv()
@@ -496,22 +608,70 @@ def download_data_cli():
 
 def main():
     """
-    主執行入口點，用於解析命令列參數並執行 lookup_target。
+    主執行入口點，用於解析命令列參數並執行對應的指令。
     """
-    parser = argparse.ArgumentParser(description="演算法交易框架 - 策略回測優化")
+    parser = argparse.ArgumentParser(description="演算法交易框架")
+    subparsers = parser.add_subparsers(dest='command', help='可用的指令')
+    subparsers.required = True
 
-    parser.add_argument(
-        "--filename",
+    # --- `lookup` 指令 ---
+    parser_lookup = subparsers.add_parser('lookup', help='執行策略參數優化，找到最佳參數')
+    parser_lookup.add_argument(
+        "--data-file",
         type=str,
         default=Config.YFINANCE_FILE_NAME,
         help=f"要讀取的 CSV 資料檔案路徑 (預設: {Config.YFINANCE_FILE_NAME})"
     )
+    parser_lookup.set_defaults(func=lambda args: lookup_target(filename=args.data_file))
+
+    # --- `run_strategy` 指令 ---
+    parser_run = subparsers.add_parser('run_strategy', help='使用指定的參數檔案執行策略，並產生交易訊號')
+    parser_run.add_argument(
+        "--data-file",
+        type=str,
+        default=Config.YFINANCE_FILE_NAME,
+        help=f"要讀取的 CSV 資料檔案路徑 (預設: {Config.YFINANCE_FILE_NAME})"
+    )
+    parser_run.add_argument(
+        "--input-file",
+        type=str,
+        default="output/best_strategy_params.json",
+        help="策略參數的 JSON 來源檔案 (預設: output/best_strategy_params.json)"
+    )
+    parser_run.add_argument(
+        "--output-file",
+        type=str,
+        default="output/strategy_trades.json",
+        help="策略交易訊號的 JSON 輸出檔案 (預設: output/strategy_trades.json)"
+    )
+    parser_run.add_argument(
+        "--start-date",
+        type=str,
+        default=None,
+        help="覆寫所有策略的 start_date (格式: YYYY-MM-DD)"
+    )
+    parser_run.add_argument(
+        "--end-date",
+        type=str,
+        default=None,
+        help="覆寫所有策略的 end_date (格式: YYYY-MM-DD)"
+    )
+    parser_run.add_argument(
+        "--skip-dates",
+        type=str,
+        default=None,
+        help="覆寫所有策略的 skip_dates (格式: YYYY-MM-DD,YYYY-MM-DD,...)"
+    )
+    parser_run.set_defaults(func=run_strategy)
+
 
     args = parser.parse_args()
 
-    print(f"🔄 開始執行 lookup_target，使用資料檔案: {args.filename}")
-
-    lookup_target(filename=args.filename)
+    # 根據選擇的指令執行對應的函式
+    if hasattr(args, 'func'):
+        args.func(args)
+    else:
+        parser.print_help()
 
 
 
