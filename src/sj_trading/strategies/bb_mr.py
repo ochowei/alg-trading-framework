@@ -160,7 +160,7 @@ class BollingerBandsMeanReversion(bt.Strategy):
             pnl = order.executed.pnl
 
             self.logger.debug(f"✅ {trade_date} | 交易完成 @ {price:.2f} | Size: {size}")
-            log_action = "⬅️" if size < 0 else "➡️" # 視覺化買賣方向
+            log_action = "⬅️" if order.issell() else "➡️" # 視覺化買賣方向
             self.logger.debug(f"   {log_action} 交易金額: {cost:.2f} | PnL: {pnl:.2f} | 交易成本: {commission:.2f}")
             self.logger.debug(f"   💰 現金餘額: {cash_remain:.2f} | 總資產: {portfolio_value:.2f}")
             self.order = None
@@ -187,7 +187,7 @@ class BollingerBandsMeanReversion(bt.Strategy):
                 self.stop_loss_order = None
 
         elif order.status in [order.Canceled, order.Margin, order.Rejected]:
-            self.logger.warning(f"⚠️ {trade_date} | 訂單未能完成 | Status: {status}")
+            # self.logger.warning(f"⚠️ {trade_date} | 訂單未能完成 | Status: {status}")
             if self.stop_loss_order and self.stop_loss_order.ref == order.ref:
                 self.stop_loss_order = None
             self.order = None
