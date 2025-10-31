@@ -42,7 +42,7 @@ class Dataloader(bt.feeds.PandasData):
         if not os.path.exists(filename):
             print(f"Error: 檔案 {filename} 不存在。")
             return pd.DataFrame() # 回傳空的 DataFrame
-        df = pd.read_csv(filename)
+        df = pd.read_csv(filename, parse_dates=['Date'])
         return df
     
     @classmethod
