@@ -167,13 +167,13 @@ def simulate_trades(file_path, initial_capital, show_non_executed_orders=False):
                 for _, row in buys_signals.iterrows():
                     ticker = row['ticker']
                     buy_price = Decimal(str(row['price']))
-                    print(f"  > [cyan]買入訊號[/cyan] {ticker}: @ ${buy_price:,.2f}, 觸發 {row.get('trigger', 'N/A')}, 停損 {row.get('stop_loss', 'N/A')}")
+                    print(f"  > [cyan]買入訊號[/cyan] {ticker}: @ ${buy_price:,.2f}, 觸發 {row.get('trigger', 'N/A'):,.2f}, 停損 {row.get('stop_loss', 'N/A'):,.2f}")
 
             buys_signals_ignored = day_trades[day_trades['action'] == 3]
             for _, row in buys_signals_ignored.iterrows():
                 ticker = row['ticker']
                 buy_price = Decimal(str(row['price']))
-                print(f"{date_str} [cyan]無執行買入訊號[/cyan] {ticker}: ${buy_price:,.2f} 觸發 {row.get('trigger', 'N/A')} 停損 {row.get('stop_loss', 'N/A')}")
+                print(f"{date_str} [cyan]無執行買入訊號[/cyan] {ticker}: ${buy_price:,.2f} 觸發 {row.get('trigger', 'N/A'):,.2f} 停損 {row.get('stop_loss', 'N/A'):,.2f}")
 
         # Settle funds from today's sales for use on the next day
         cash += pending_settlement
