@@ -1,0 +1,563 @@
+[
+  {
+    "ticker": "NYSE:MP",
+    "strategy": "BollingerBandsMeanReversion",
+    "parameters": {
+      "bb_period": 25,
+      "bb_devfactor": 1.6,
+      "atr_period": 14,
+      "risk": 0.9,
+      "max_position_ratio": 0.99,
+      "stock_id": "NYSE:MP",
+      "start_date": "2025-08-01T00:00:00",
+      "end_date": "2025-11-01T00:00:00",
+      "skip_dates": [],
+      "stop_loss_atr_multiplier": 0,
+      "stop_loss_pct": 0.05
+    }
+  },
+  {
+    "ticker": "NYSEAMERICAN:UUUU",
+    "strategy": "BollingerBandsMeanReversion",
+    "parameters": {
+      "bb_period": 5,
+      "bb_devfactor": 1.2,
+      "atr_period": 14,
+      "risk": 0.9,
+      "max_position_ratio": 0.99,
+      "stock_id": "NYSEAMERICAN:UUUU",
+      "start_date": "2025-08-01T00:00:00",
+      "end_date": "2025-11-01T00:00:00",
+      "skip_dates": [],
+      "stop_loss_atr_multiplier": 0,
+      "stop_loss_pct": 0.05
+    }
+  },
+  {
+    "ticker": "NYSEAMERICAN:UAMY",
+    "strategy": "BollingerBandsMeanReversion",
+    "parameters": {
+      "bb_period": 10,
+      "bb_devfactor": 1.2,
+      "atr_period": 14,
+      "risk": 0.9,
+      "max_position_ratio": 0.99,
+      "stock_id": "NYSEAMERICAN:UAMY",
+      "start_date": "2025-08-01T00:00:00",
+      "end_date": "2025-11-01T00:00:00",
+      "skip_dates": [],
+      "stop_loss_atr_multiplier": 0,
+      "stop_loss_pct": 0.05
+    }
+  },
+  {
+    "ticker": "NASDAQ:ONDS",
+    "strategy": "BollingerBandsMeanReversion",
+    "parameters": {
+      "bb_period": 5,
+      "bb_devfactor": 1.2,
+      "atr_period": 14,
+      "risk": 0.9,
+      "max_position_ratio": 0.99,
+      "stock_id": "NASDAQ:ONDS",
+      "start_date": "2025-08-01T00:00:00",
+      "end_date": "2025-11-01T00:00:00",
+      "skip_dates": [],
+      "stop_loss_atr_multiplier": 0,
+      "stop_loss_pct": 0.05
+    }
+  },
+  {
+    "ticker": "NASDAQ:RCAT",
+    "strategy": "BollingerBandsMeanReversion",
+    "parameters": {
+      "bb_period": 20,
+      "bb_devfactor": 1.2,
+      "atr_period": 14,
+      "risk": 0.9,
+      "max_position_ratio": 0.99,
+      "stock_id": "NASDAQ:RCAT",
+      "start_date": "2025-08-01T00:00:00",
+      "end_date": "2025-11-01T00:00:00",
+      "skip_dates": [],
+      "stop_loss_atr_multiplier": 0,
+      "stop_loss_pct": 0.05
+    }
+  },
+  {
+    "ticker": "NYSEAMERICAN:LEU",
+    "strategy": "BollingerBandsMeanReversion",
+    "parameters": {
+      "bb_period": 15,
+      "bb_devfactor": 1.2,
+      "atr_period": 14,
+      "risk": 0.9,
+      "max_position_ratio": 0.99,
+      "stock_id": "NYSEAMERICAN:LEU",
+      "start_date": "2025-08-01T00:00:00",
+      "end_date": "2025-11-01T00:00:00",
+      "skip_dates": [],
+      "stop_loss_atr_multiplier": 0,
+      "stop_loss_pct": 0.05
+    }
+  },
+  {
+    "ticker": "NYSE:SMR",
+    "strategy": "BollingerBandsMeanReversion",
+    "parameters": {
+      "bb_period": 30,
+      "bb_devfactor": 1.2,
+      "atr_period": 14,
+      "risk": 0.9,
+      "max_position_ratio": 0.99,
+      "stock_id": "NYSE:SMR",
+      "start_date": "2025-08-01T00:00:00",
+      "end_date": "2025-11-01T00:00:00",
+      "skip_dates": [],
+      "stop_loss_atr_multiplier": 0,
+      "stop_loss_pct": 0.05
+    }
+  },
+  {
+    "ticker": "NYSE:BE",
+    "strategy": "BollingerBandsMeanReversion",
+    "parameters": {
+      "bb_period": 5,
+      "bb_devfactor": 1.2,
+      "atr_period": 14,
+      "risk": 0.9,
+      "max_position_ratio": 0.99,
+      "stock_id": "NYSE:BE",
+      "start_date": "2025-08-01T00:00:00",
+      "end_date": "2025-11-01T00:00:00",
+      "skip_dates": [],
+      "stop_loss_atr_multiplier": 0,
+      "stop_loss_pct": 0.05
+    }
+  },
+  {
+    "ticker": "NYSE:VST",
+    "strategy": "BollingerBandsMeanReversion",
+    "parameters": {
+      "bb_period": 20,
+      "bb_devfactor": 1.2,
+      "atr_period": 14,
+      "risk": 0.9,
+      "max_position_ratio": 0.99,
+      "stock_id": "NYSE:VST",
+      "start_date": "2025-08-01T00:00:00",
+      "end_date": "2025-11-01T00:00:00",
+      "skip_dates": [],
+      "stop_loss_atr_multiplier": 0,
+      "stop_loss_pct": 0.05
+    }
+  },
+  {
+    "ticker": "NASDAQ:EOSE",
+    "strategy": "BollingerBandsMeanReversion",
+    "parameters": {
+      "bb_period": 5,
+      "bb_devfactor": 1.2,
+      "atr_period": 14,
+      "risk": 0.9,
+      "max_position_ratio": 0.99,
+      "stock_id": "NASDAQ:EOSE",
+      "start_date": "2025-08-01T00:00:00",
+      "end_date": "2025-11-01T00:00:00",
+      "skip_dates": [],
+      "stop_loss_atr_multiplier": 0,
+      "stop_loss_pct": 0.05
+    }
+  },
+  {
+    "ticker": "NYSEAMERICAN:WWR",
+    "strategy": "BollingerBandsMeanReversion",
+    "parameters": {
+      "bb_period": 10,
+      "bb_devfactor": 1.4,
+      "atr_period": 14,
+      "risk": 0.9,
+      "max_position_ratio": 0.99,
+      "stock_id": "NYSEAMERICAN:WWR",
+      "start_date": "2025-08-01T00:00:00",
+      "end_date": "2025-11-01T00:00:00",
+      "skip_dates": [],
+      "stop_loss_atr_multiplier": 0,
+      "stop_loss_pct": 0.05
+    }
+  },
+  {
+    "ticker": "NASDAQ:AMD",
+    "strategy": "BollingerBandsMeanReversion",
+    "parameters": {
+      "bb_period": 5,
+      "bb_devfactor": 1.2,
+      "atr_period": 14,
+      "risk": 0.9,
+      "max_position_ratio": 0.99,
+      "stock_id": "NASDAQ:AMD",
+      "start_date": "2025-08-01T00:00:00",
+      "end_date": "2025-11-01T00:00:00",
+      "skip_dates": [],
+      "stop_loss_atr_multiplier": 0,
+      "stop_loss_pct": 0.05
+    }
+  },
+  {
+    "ticker": "NASDAQ:NVDA",
+    "strategy": "BollingerBandsMeanReversion",
+    "parameters": {
+      "bb_period": 5,
+      "bb_devfactor": 1.2,
+      "atr_period": 14,
+      "risk": 0.9,
+      "max_position_ratio": 0.99,
+      "stock_id": "NASDAQ:NVDA",
+      "start_date": "2025-08-01T00:00:00",
+      "end_date": "2025-11-01T00:00:00",
+      "skip_dates": [],
+      "stop_loss_atr_multiplier": 0,
+      "stop_loss_pct": 0.05
+    }
+  },
+  {
+    "ticker": "NYSE:TSM",
+    "strategy": "BollingerBandsMeanReversion",
+    "parameters": {
+      "bb_period": 5,
+      "bb_devfactor": 1.6,
+      "atr_period": 14,
+      "risk": 0.9,
+      "max_position_ratio": 0.99,
+      "stock_id": "NYSE:TSM",
+      "start_date": "2025-08-01T00:00:00",
+      "end_date": "2025-11-01T00:00:00",
+      "skip_dates": [],
+      "stop_loss_atr_multiplier": 0,
+      "stop_loss_pct": 0.05
+    }
+  },
+  {
+    "ticker": "NASDAQ:ALAB",
+    "strategy": "BollingerBandsMeanReversion",
+    "parameters": {
+      "bb_period": 10,
+      "bb_devfactor": 1.2,
+      "atr_period": 14,
+      "risk": 0.9,
+      "max_position_ratio": 0.99,
+      "stock_id": "NASDAQ:ALAB",
+      "start_date": "2025-08-01T00:00:00",
+      "end_date": "2025-11-01T00:00:00",
+      "skip_dates": [],
+      "stop_loss_atr_multiplier": 0,
+      "stop_loss_pct": 0.05
+    }
+  },
+  {
+    "ticker": "NASDAQ:NVTS",
+    "strategy": "BollingerBandsMeanReversion",
+    "parameters": {
+      "bb_period": 5,
+      "bb_devfactor": 1.4,
+      "atr_period": 14,
+      "risk": 0.9,
+      "max_position_ratio": 0.99,
+      "stock_id": "NASDAQ:NVTS",
+      "start_date": "2025-08-01T00:00:00",
+      "end_date": "2025-11-01T00:00:00",
+      "skip_dates": [],
+      "stop_loss_atr_multiplier": 0,
+      "stop_loss_pct": 0.05
+    }
+  },
+  {
+    "ticker": "NASDAQ:POWI",
+    "strategy": "BollingerBandsMeanReversion",
+    "parameters": {
+      "bb_period": 5,
+      "bb_devfactor": 1.2,
+      "atr_period": 14,
+      "risk": 0.9,
+      "max_position_ratio": 0.99,
+      "stock_id": "NASDAQ:POWI",
+      "start_date": "2025-08-01T00:00:00",
+      "end_date": "2025-11-01T00:00:00",
+      "skip_dates": [],
+      "stop_loss_atr_multiplier": 0,
+      "stop_loss_pct": 0.05
+    }
+  },
+  {
+    "ticker": "NASDAQ:GOOG",
+    "strategy": "BollingerBandsMeanReversion",
+    "parameters": {
+      "bb_period": 10,
+      "bb_devfactor": 1.6,
+      "atr_period": 14,
+      "risk": 0.9,
+      "max_position_ratio": 0.99,
+      "stock_id": "NASDAQ:GOOG",
+      "start_date": "2025-08-01T00:00:00",
+      "end_date": "2025-11-01T00:00:00",
+      "skip_dates": [],
+      "stop_loss_atr_multiplier": 0,
+      "stop_loss_pct": 0.05
+    }
+  },
+  {
+    "ticker": "NASDAQ:ADBE",
+    "strategy": "BollingerBandsMeanReversion",
+    "parameters": {
+      "bb_period": 30,
+      "bb_devfactor": 2.2,
+      "atr_period": 14,
+      "risk": 0.9,
+      "max_position_ratio": 0.99,
+      "stock_id": "NASDAQ:ADBE",
+      "start_date": "2025-08-01T00:00:00",
+      "end_date": "2025-11-01T00:00:00",
+      "skip_dates": [],
+      "stop_loss_atr_multiplier": 0,
+      "stop_loss_pct": 0.05
+    }
+  },
+  {
+    "ticker": "NASDAQ:DUOL",
+    "strategy": "BollingerBandsMeanReversion",
+    "parameters": {
+      "bb_period": 20,
+      "bb_devfactor": 1.4,
+      "atr_period": 14,
+      "risk": 0.9,
+      "max_position_ratio": 0.99,
+      "stock_id": "NASDAQ:DUOL",
+      "start_date": "2025-08-01T00:00:00",
+      "end_date": "2025-11-01T00:00:00",
+      "skip_dates": [],
+      "stop_loss_atr_multiplier": 0,
+      "stop_loss_pct": 0.05
+    }
+  },
+  {
+    "ticker": "NYSE:FIG",
+    "strategy": "BollingerBandsMeanReversion",
+    "parameters": {
+      "bb_period": 15,
+      "bb_devfactor": 1.6,
+      "atr_period": 14,
+      "risk": 0.9,
+      "max_position_ratio": 0.99,
+      "stock_id": "NYSE:FIG",
+      "start_date": "2025-08-01T00:00:00",
+      "end_date": "2025-11-01T00:00:00",
+      "skip_dates": [],
+      "stop_loss_atr_multiplier": 0,
+      "stop_loss_pct": 0.05
+    }
+  },
+  {
+    "ticker": "NASDAQ:GRAB",
+    "strategy": "BollingerBandsMeanReversion",
+    "parameters": {
+      "bb_period": 10,
+      "bb_devfactor": 1.6,
+      "atr_period": 14,
+      "risk": 0.9,
+      "max_position_ratio": 0.99,
+      "stock_id": "NASDAQ:GRAB",
+      "start_date": "2025-08-01T00:00:00",
+      "end_date": "2025-11-01T00:00:00",
+      "skip_dates": [],
+      "stop_loss_atr_multiplier": 0,
+      "stop_loss_pct": 0.05
+    }
+  },
+  {
+    "ticker": "NYSE:RBRK",
+    "strategy": "BollingerBandsMeanReversion",
+    "parameters": {
+      "bb_period": 20,
+      "bb_devfactor": 2.2,
+      "atr_period": 14,
+      "risk": 0.9,
+      "max_position_ratio": 0.99,
+      "stock_id": "NYSE:RBRK",
+      "start_date": "2025-08-01T00:00:00",
+      "end_date": "2025-11-01T00:00:00",
+      "skip_dates": [],
+      "stop_loss_atr_multiplier": 0,
+      "stop_loss_pct": 0.05
+    }
+  },
+  {
+    "ticker": "NASDAQ:CIFR",
+    "strategy": "BollingerBandsMeanReversion",
+    "parameters": {
+      "bb_period": 5,
+      "bb_devfactor": 1.4,
+      "atr_period": 14,
+      "risk": 0.9,
+      "max_position_ratio": 0.99,
+      "stock_id": "NASDAQ:CIFR",
+      "start_date": "2025-08-01T00:00:00",
+      "end_date": "2025-11-01T00:00:00",
+      "skip_dates": [],
+      "stop_loss_atr_multiplier": 0,
+      "stop_loss_pct": 0.05
+    }
+  },
+  {
+    "ticker": "NASDAQ:SOFI",
+    "strategy": "BollingerBandsMeanReversion",
+    "parameters": {
+      "bb_period": 15,
+      "bb_devfactor": 1.8,
+      "atr_period": 14,
+      "risk": 0.9,
+      "max_position_ratio": 0.99,
+      "stock_id": "NASDAQ:SOFI",
+      "start_date": "2025-08-01T00:00:00",
+      "end_date": "2025-11-01T00:00:00",
+      "skip_dates": [],
+      "stop_loss_atr_multiplier": 0,
+      "stop_loss_pct": 0.05
+    }
+  },
+  {
+    "ticker": "NASDAQ:IBIT",
+    "strategy": "BollingerBandsMeanReversion",
+    "parameters": {
+      "bb_period": 15,
+      "bb_devfactor": 1.6,
+      "atr_period": 14,
+      "risk": 0.9,
+      "max_position_ratio": 0.99,
+      "stock_id": "NASDAQ:IBIT",
+      "start_date": "2025-08-01T00:00:00",
+      "end_date": "2025-11-01T00:00:00",
+      "skip_dates": [],
+      "stop_loss_atr_multiplier": 0,
+      "stop_loss_pct": 0.05
+    }
+  },
+  {
+    "ticker": "NYSE:IONQ",
+    "strategy": "BollingerBandsMeanReversion",
+    "parameters": {
+      "bb_period": 30,
+      "bb_devfactor": 1.2,
+      "atr_period": 14,
+      "risk": 0.9,
+      "max_position_ratio": 0.99,
+      "stock_id": "NYSE:IONQ",
+      "start_date": "2025-08-01T00:00:00",
+      "end_date": "2025-11-01T00:00:00",
+      "skip_dates": [],
+      "stop_loss_atr_multiplier": 0,
+      "stop_loss_pct": 0.05
+    }
+  },
+  {
+    "ticker": "NASDAQ:TMDX",
+    "strategy": "BollingerBandsMeanReversion",
+    "parameters": {
+      "bb_period": 25,
+      "bb_devfactor": 1.6,
+      "atr_period": 14,
+      "risk": 0.9,
+      "max_position_ratio": 0.99,
+      "stock_id": "NASDAQ:TMDX",
+      "start_date": "2025-08-01T00:00:00",
+      "end_date": "2025-11-01T00:00:00",
+      "skip_dates": [],
+      "stop_loss_atr_multiplier": 0,
+      "stop_loss_pct": 0.05
+    }
+  },
+  {
+    "ticker": "NASDAQ:TSLA",
+    "strategy": "BollingerBandsMeanReversion",
+    "parameters": {
+      "bb_period": 5,
+      "bb_devfactor": 1.2,
+      "atr_period": 14,
+      "risk": 0.9,
+      "max_position_ratio": 0.99,
+      "stock_id": "NASDAQ:TSLA",
+      "start_date": "2025-08-01T00:00:00",
+      "end_date": "2025-11-01T00:00:00",
+      "skip_dates": [],
+      "stop_loss_atr_multiplier": 0,
+      "stop_loss_pct": 0.05
+    }
+  },
+  {
+    "ticker": "NASDAQ:BND",
+    "strategy": "BollingerBandsMeanReversion",
+    "parameters": {
+      "bb_period": 5,
+      "bb_devfactor": 1.2,
+      "atr_period": 14,
+      "risk": 0.9,
+      "max_position_ratio": 0.99,
+      "stock_id": "NASDAQ:BND",
+      "start_date": "2025-08-01T00:00:00",
+      "end_date": "2025-11-01T00:00:00",
+      "skip_dates": [],
+      "stop_loss_atr_multiplier": 0,
+      "stop_loss_pct": 0.05
+    }
+  },
+  {
+    "ticker": "NYSEARCA:MGK",
+    "strategy": "BollingerBandsMeanReversion",
+    "parameters": {
+      "bb_period": 10,
+      "bb_devfactor": 1.4,
+      "atr_period": 14,
+      "risk": 0.9,
+      "max_position_ratio": 0.99,
+      "stock_id": "NYSEARCA:MGK",
+      "start_date": "2025-08-01T00:00:00",
+      "end_date": "2025-11-01T00:00:00",
+      "skip_dates": [],
+      "stop_loss_atr_multiplier": 0,
+      "stop_loss_pct": 0.05
+    }
+  },
+  {
+    "ticker": "NYSEARCA:SIVR",
+    "strategy": "BollingerBandsMeanReversion",
+    "parameters": {
+      "bb_period": 15,
+      "bb_devfactor": 1.2,
+      "atr_period": 14,
+      "risk": 0.9,
+      "max_position_ratio": 0.99,
+      "stock_id": "NYSEARCA:SIVR",
+      "start_date": "2025-08-01T00:00:00",
+      "end_date": "2025-11-01T00:00:00",
+      "skip_dates": [],
+      "stop_loss_atr_multiplier": 0,
+      "stop_loss_pct": 0.05
+    }
+  },
+  {
+    "ticker": "NYSEARCA:VOO",
+    "strategy": "BollingerBandsMeanReversion",
+    "parameters": {
+      "bb_period": 10,
+      "bb_devfactor": 1.2,
+      "atr_period": 14,
+      "risk": 0.9,
+      "max_position_ratio": 0.99,
+      "stock_id": "NYSEARCA:VOO",
+      "start_date": "2025-08-01T00:00:00",
+      "end_date": "2025-11-01T00:00:00",
+      "skip_dates": [],
+      "stop_loss_atr_multiplier": 0,
+      "stop_loss_pct": 0.05
+    }
+  }
+]
