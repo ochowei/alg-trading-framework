@@ -532,8 +532,8 @@ def run_strategy_once(df: pd.DataFrame, ticker: str, strategy_class: bt.Strategy
     cerebro = bt.Cerebro()
 
     # 從參數中獲取日期，若無則使用預設值
-    start_date = strategy_params.get('start_date', Config.ONE_THOUSAND_DAYS_AGO.strftime('%Y-%m-%d'))
-    end_date = strategy_params.get('end_date', Config.ONE_WEEK_LATER.strftime('%Y-%m-%d'))
+    start_date =  Config.ONE_THOUSAND_DAYS_AGO.strftime('%Y-%m-%d')
+    end_date =  Config.ONE_WEEK_LATER.strftime('%Y-%m-%d')
 
     # 載入數據
     data = Dataloader.from_csv_df(df=df, symbol=ticker, start=start_date, end=end_date)
