@@ -93,6 +93,11 @@ def simulate_trades(file_path, initial_capital, show_non_executed_orders=False):
                 if buy_price > 0 and cash_per_buy > 0:
                     # 根據分配的現金，計算可負擔的整數股數 (無條件捨去)
                     size_to_buy = (cash_per_buy / buy_price).to_integral_value(rounding=ROUND_FLOOR)
+                    if size_to_buy <= 0:
+                        print(f"  > [買入跳過] {ticker}: 分配現金 ${cash_per_buy.quantize(CENTS, rounding=ROUND_HALF_UP):,} 無法購買任何股數 @ ${buy_price:,.2f}。")
+                        # 將分配的現金加回主現金池
+                        cash += cash_per_buy
+                        continue
 
                     # 根據整數股數計算實際成本
                     actual_cost_of_buy = size_to_buy * buy_price
@@ -169,6 +174,7 @@ def simulate_trades(file_path, initial_capital, show_non_executed_orders=False):
 
             print(f"{date_str} [買入訊號] {num_buysignals} 個。可用現金 ${cash.quantize(CENTS, rounding=ROUND_HALF_UP):,}，每個訊號分配 ${cash_per_buy.quantize(CENTS, rounding=ROUND_HALF_UP):,}")
             for _, row in buys_signals.iterrows():
+                stop_loss = row.get('stop_loss', None)
                 buy_price = Decimal(str(row['price']))
                 ticker = row['ticker']
 
@@ -176,14 +182,14 @@ def simulate_trades(file_path, initial_capital, show_non_executed_orders=False):
                     # 分配的現金即為此次購買的成本
                     size_to_buy = (cash_per_buy / buy_price).to_integral_value(rounding=ROUND_FLOOR)
                     actual_cost_of_buy = size_to_buy * buy_price
-                    print(f"  > [買入訊號] {ticker}: 投入 ${actual_cost_of_buy.quantize(CENTS, rounding=ROUND_HALF_UP):,} 購買 {size_to_buy:.0f} 股 @ ${buy_price:,.2f}。")
+                    print(f"  > [買入訊號] {ticker}: 投入 ${actual_cost_of_buy.quantize(CENTS, rounding=ROUND_HALF_UP):,} 購買 {size_to_buy:.0f} 股 @ ${buy_price:,.2f}, 停損 {stop_loss: .2f}。")
 
         if show_non_executed_orders:
             buys_signals = day_trades[day_trades['action'] == 3]
             for _, row in buys_signals.iterrows():
                 ticker = row['ticker']
                 buy_price = Decimal(str(row['price']))
-                print(f"{date_str} [無執行買入訊號] {ticker}: ${buy_price:,.2f}")
+                print(f"{date_str} [無執行買入訊號] {ticker}: ${buy_price:,.2f} 停損 {row.get('stop_loss', None): .2f}。")
 
         # Settle funds from today's sales for use on the next day
         cash += pending_settlement

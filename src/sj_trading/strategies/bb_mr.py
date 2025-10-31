@@ -58,6 +58,8 @@ class BollingerBandsMeanReversion(bt.Strategy):
         self.top_band = self.bollinger.lines.top
         self.bot_band = self.bollinger.lines.bot
 
+        self.stop_price = None
+
     def next(self):
         trade_date = self.datas[0].datetime.date(0)
         price = self.data.close[0]
@@ -116,17 +118,27 @@ class BollingerBandsMeanReversion(bt.Strategy):
         size = int(size) # 確保是整數股數
         if size <= 0: # 避免下單 0 股
             return
+        
+        if self.position and self.stop_price and price < self.stop_price:
+            self.logger.debug(f"💡 {trade_date} | 價格 {price:.2f} 觸及停損價 {self.stop_price:.2f} | 停損賣出")
+            self.signal_list.append({ "date": f"{trade_date}", "action": -1, "size": size, "price": price, "total": size * price, "stop_loss_trigger": self.stop_price })
+            self.close()
+            self.last_trade_date = trade_date
+            return
+
+
 
         # 進場邏輯：價格跌破下軌且目前無倉位
         if  price < self.bot_band[0]:
             self.logger.debug(f"💡 {trade_date} | 價格 {price:.2f} 跌破下軌 {self.bot_band[0]:.2f} | 嘗試買入 | Size: {size}")
+            stop_price = price * (1.0 - self.params.stop_loss_pct)
 
             if not self.position:
-                self.signal_list.append({ "date": f"{trade_date}", "action": 1, "size": size, "price": price, "total": -size * price })
+                self.signal_list.append({ "date": f"{trade_date}", "action": 1, "size": size, "price": price, "total": -size * price, "stop_loss": stop_price })
                 self.order = self.buy(size=size,exectype=bt.Order.Limit, price=(price+high)/2) # 限價單買入              
                 self.last_trade_date = trade_date # 記錄交易日期
             else:
-                self.signal_list.append({ "date": f"{trade_date}", "action": 3, "size": size, "price": price, "total": -size * price, "trigger": self.bot_band[0]})
+                self.signal_list.append({ "date": f"{trade_date}", "action": 3, "size": size, "price": price, "total": -size * price, "trigger": self.bot_band[0], "stop_loss": stop_price })
 
 
         # 出場邏輯：價格回升觸及中線且目前持有倉位
