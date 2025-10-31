@@ -1,0 +1,10 @@
+{
+  "name": "My Python Project",
+  "image": "mcr.microsoft.com/devcontainers/python:3.11",
+
+  // --- 在這裡加入 "features" 區塊 ---
+  "features": {
+    "ghcr.io/astral-sh/devcontainer-features/uv:latest": {}
+  }
+  // --- ---
+}
