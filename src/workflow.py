@@ -175,7 +175,10 @@ def run_optimization_once(df:pd.DataFrame, ticker:str, strategy:bt.Strategy, pri
                 "profit_factor": profit_factor,
                 "cumulative_return": cumulative_return,
                 "annual_return": annualized_return,
-                "strat": strat
+                "strat": strat,
+                "sum_holding_days": sum(holding_stats['holding_days']),
+                "num_trades": total_trades,
+                "average_holding_days": holding_stats['average_bars']
             }
         
 
@@ -299,7 +302,15 @@ def opt_strategy(filename: str = Config.YFINANCE_FILE_NAME):
             all_best_params.append({
                 "ticker": ticker,
                 "strategy": opt_strategy.__name__,
-                "parameters": params
+                "parameters": params,
+                "sharpe": sharpe,
+                "max_drawdown": best_result["max_drawdown"],
+                "win_rate": win_rate,
+                "cumulative_return": cumulative_return,
+                "sum_holding_days": best_result["sum_holding_days"],
+                "num_trades": best_result["num_trades"],
+                "average_holding_days":  best_result["average_holding_days"]
+                
             })
 
             strat = best_result["strat"]

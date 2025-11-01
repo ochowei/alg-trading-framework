@@ -14,7 +14,14 @@
       "skip_dates": [],
       "stop_loss_atr_multiplier": 0,
       "stop_loss_pct": 0.05
-    }
+    },
+    "sharpe": 0.10108251922915955,
+    "max_drawdown": 1.0059922453295862,
+    "win_rate": 1.0,
+    "cumulative_return": 0.14769449999999984,
+    "sum_holding_days": 11,
+    "num_trades": 1,
+    "average_holding_days": 9.0
   },
   {
     "ticker": "NYSEAMERICAN:UUUU",
@@ -31,7 +38,14 @@
       "skip_dates": [],
       "stop_loss_atr_multiplier": 0,
       "stop_loss_pct": 0.05
-    }
+    },
+    "sharpe": 0.1144380744719346,
+    "max_drawdown": 7.920671649327698,
+    "win_rate": 0.8,
+    "cumulative_return": 0.3339791999999995,
+    "sum_holding_days": 9,
+    "num_trades": 5,
+    "average_holding_days": 1.75
   },
   {
     "ticker": "NYSEAMERICAN:UAMY",
@@ -48,7 +62,14 @@
       "skip_dates": [],
       "stop_loss_atr_multiplier": 0,
       "stop_loss_pct": 0.05
-    }
+    },
+    "sharpe": 0.05425833284479731,
+    "max_drawdown": 6.862371233209375,
+    "win_rate": 0.6666666666666666,
+    "cumulative_return": 0.1674500000000001,
+    "sum_holding_days": 2,
+    "num_trades": 3,
+    "average_holding_days": 1.0
   },
   {
     "ticker": "NASDAQ:ONDS",
@@ -65,7 +86,14 @@
       "skip_dates": [],
       "stop_loss_atr_multiplier": 0,
       "stop_loss_pct": 0.05
-    }
+    },
+    "sharpe": 0.04302163391004773,
+    "max_drawdown": 13.874239986039708,
+    "win_rate": 1.0,
+    "cumulative_return": 0.11921074999999992,
+    "sum_holding_days": 11,
+    "num_trades": 2,
+    "average_holding_days": 3.5
   },
   {
     "ticker": "NASDAQ:RCAT",
@@ -82,7 +110,14 @@
       "skip_dates": [],
       "stop_loss_atr_multiplier": 0,
       "stop_loss_pct": 0.05
-    }
+    },
+    "sharpe": 0.0850878478533854,
+    "max_drawdown": 4.1984078394107875,
+    "win_rate": 0.6666666666666666,
+    "cumulative_return": 0.45478390000000046,
+    "sum_holding_days": 9,
+    "num_trades": 3,
+    "average_holding_days": 3.5
   },
   {
     "ticker": "NYSEAMERICAN:LEU",
@@ -99,7 +134,14 @@
       "skip_dates": [],
       "stop_loss_atr_multiplier": 0,
       "stop_loss_pct": 0.05
-    }
+    },
+    "sharpe": 0.11145162915157009,
+    "max_drawdown": 10.771494187465537,
+    "win_rate": 1.0,
+    "cumulative_return": 0.4342478000000001,
+    "sum_holding_days": 20,
+    "num_trades": 3,
+    "average_holding_days": 4.666666666666667
   },
   {
     "ticker": "NYSE:SMR",
@@ -116,7 +158,14 @@
       "skip_dates": [],
       "stop_loss_atr_multiplier": 0,
       "stop_loss_pct": 0.05
-    }
+    },
+    "sharpe": 0.06700644236053967,
+    "max_drawdown": 14.579919537614872,
+    "win_rate": 1.0,
+    "cumulative_return": 0.24866180000000004,
+    "sum_holding_days": 38,
+    "num_trades": 2,
+    "average_holding_days": 11.0
   },
   {
     "ticker": "NYSE:BE",
@@ -133,7 +182,14 @@
       "skip_dates": [],
       "stop_loss_atr_multiplier": 0,
       "stop_loss_pct": 0.05
-    }
+    },
+    "sharpe": 0.09472256618915867,
+    "max_drawdown": 11.536172446995351,
+    "win_rate": 1.0,
+    "cumulative_return": 0.4532210000000001,
+    "sum_holding_days": 22,
+    "num_trades": 4,
+    "average_holding_days": 3.5
   },
   {
     "ticker": "NYSE:VST",
@@ -150,7 +206,14 @@
       "skip_dates": [],
       "stop_loss_atr_multiplier": 0,
       "stop_loss_pct": 0.05
-    }
+    },
+    "sharpe": 0.09295091717069169,
+    "max_drawdown": 4.9330982313773495,
+    "win_rate": 0.75,
+    "cumulative_return": 0.19968400000000042,
+    "sum_holding_days": 29,
+    "num_trades": 4,
+    "average_holding_days": 6.666666666666667
   },
   {
     "ticker": "NASDAQ:EOSE",
@@ -167,7 +230,14 @@
       "skip_dates": [],
       "stop_loss_atr_multiplier": 0,
       "stop_loss_pct": 0.05
-    }
+    },
+    "sharpe": 0.08942598933172191,
+    "max_drawdown": 3.9442668326117034,
+    "win_rate": 1.0,
+    "cumulative_return": 0.21506935000000005,
+    "sum_holding_days": 12,
+    "num_trades": 5,
+    "average_holding_days": 2.0
   },
   {
     "ticker": "NYSEAMERICAN:WWR",
@@ -184,7 +254,14 @@
       "skip_dates": [],
       "stop_loss_atr_multiplier": 0,
       "stop_loss_pct": 0.05
-    }
+    },
+    "sharpe": 0.10003781539535542,
+    "max_drawdown": 3.21426565423594,
+    "win_rate": 1.0,
+    "cumulative_return": 0.22000990000000042,
+    "sum_holding_days": 11,
+    "num_trades": 2,
+    "average_holding_days": 4.5
   },
   {
     "ticker": "NASDAQ:AMD",
@@ -201,7 +278,14 @@
       "skip_dates": [],
       "stop_loss_atr_multiplier": 0,
       "stop_loss_pct": 0.05
-    }
+    },
+    "sharpe": 0.06594901709200987,
+    "max_drawdown": 6.05524190571719,
+    "win_rate": 1.0,
+    "cumulative_return": 0.15148240000000035,
+    "sum_holding_days": 28,
+    "num_trades": 6,
+    "average_holding_days": 3.3333333333333335
   },
   {
     "ticker": "NASDAQ:NVDA",
@@ -218,7 +302,14 @@
       "skip_dates": [],
       "stop_loss_atr_multiplier": 0,
       "stop_loss_pct": 0.05
-    }
+    },
+    "sharpe": 0.12734016849689206,
+    "max_drawdown": 2.376091093569915,
+    "win_rate": 1.0,
+    "cumulative_return": 0.1583872500000001,
+    "sum_holding_days": 25,
+    "num_trades": 8,
+    "average_holding_days": 2.375
   },
   {
     "ticker": "NYSE:TSM",
@@ -235,7 +326,14 @@
       "skip_dates": [],
       "stop_loss_atr_multiplier": 0,
       "stop_loss_pct": 0.05
-    }
+    },
+    "sharpe": 0.12485994089518417,
+    "max_drawdown": 1.8450599999999977,
+    "win_rate": 1.0,
+    "cumulative_return": 0.13785149999999913,
+    "sum_holding_days": 16,
+    "num_trades": 4,
+    "average_holding_days": 3.0
   },
   {
     "ticker": "NASDAQ:ALAB",
@@ -252,7 +350,14 @@
       "skip_dates": [],
       "stop_loss_atr_multiplier": 0,
       "stop_loss_pct": 0.05
-    }
+    },
+    "sharpe": 0.07760769315698784,
+    "max_drawdown": 8.747415999331919,
+    "win_rate": 1.0,
+    "cumulative_return": 0.22135065000000043,
+    "sum_holding_days": 29,
+    "num_trades": 3,
+    "average_holding_days": 7.0
   },
   {
     "ticker": "NASDAQ:NVTS",
@@ -269,7 +374,14 @@
       "skip_dates": [],
       "stop_loss_atr_multiplier": 0,
       "stop_loss_pct": 0.05
-    }
+    },
+    "sharpe": 0.07385722623588918,
+    "max_drawdown": 4.78548000000001,
+    "win_rate": 0.6,
+    "cumulative_return": 0.19964060000000017,
+    "sum_holding_days": 24,
+    "num_trades": 5,
+    "average_holding_days": 4.0
   },
   {
     "ticker": "NASDAQ:POWI",
@@ -286,7 +398,14 @@
       "skip_dates": [],
       "stop_loss_atr_multiplier": 0,
       "stop_loss_pct": 0.05
-    }
+    },
+    "sharpe": 0.0567625964451238,
+    "max_drawdown": 17.499421250212944,
+    "win_rate": 0.875,
+    "cumulative_return": 0.23197429999999963,
+    "sum_holding_days": 40,
+    "num_trades": 8,
+    "average_holding_days": 3.857142857142857
   },
   {
     "ticker": "NASDAQ:GOOG",
@@ -303,7 +422,14 @@
       "skip_dates": [],
       "stop_loss_atr_multiplier": 0,
       "stop_loss_pct": 0.05
-    }
+    },
+    "sharpe": 0.08830016394217619,
+    "max_drawdown": 0.9208065980277179,
+    "win_rate": 1.0,
+    "cumulative_return": 0.048923800000000295,
+    "sum_holding_days": 9,
+    "num_trades": 2,
+    "average_holding_days": 3.5
   },
   {
     "ticker": "NASDAQ:ADBE",
@@ -320,7 +446,14 @@
       "skip_dates": [],
       "stop_loss_atr_multiplier": 0,
       "stop_loss_pct": 0.05
-    }
+    },
+    "sharpe": 0.06320345847490763,
+    "max_drawdown": 4.517580000000017,
+    "win_rate": 1.0,
+    "cumulative_return": 0.08953994999999981,
+    "sum_holding_days": 22,
+    "num_trades": 2,
+    "average_holding_days": 8.0
   },
   {
     "ticker": "NASDAQ:DUOL",
@@ -337,7 +470,14 @@
       "skip_dates": [],
       "stop_loss_atr_multiplier": 0,
       "stop_loss_pct": 0.05
-    }
+    },
+    "sharpe": 0.05200136724641266,
+    "max_drawdown": 14.45699178253416,
+    "win_rate": 0.5,
+    "cumulative_return": 0.19676829999999979,
+    "sum_holding_days": 37,
+    "num_trades": 4,
+    "average_holding_days": 8.666666666666666
   },
   {
     "ticker": "NYSE:FIG",
@@ -354,7 +494,14 @@
       "skip_dates": [],
       "stop_loss_atr_multiplier": 0,
       "stop_loss_pct": 0.05
-    }
+    },
+    "sharpe": 0.22289644130810515,
+    "max_drawdown": 6.020010467912618,
+    "win_rate": 1.0,
+    "cumulative_return": 0.32334360000000006,
+    "sum_holding_days": 19,
+    "num_trades": 2,
+    "average_holding_days": 6.5
   },
   {
     "ticker": "NASDAQ:GRAB",
@@ -371,7 +518,14 @@
       "skip_dates": [],
       "stop_loss_atr_multiplier": 0,
       "stop_loss_pct": 0.05
-    }
+    },
+    "sharpe": 0.11474409884379203,
+    "max_drawdown": 3.667481662591701,
+    "win_rate": 1.0,
+    "cumulative_return": 0.17117319999999947,
+    "sum_holding_days": 31,
+    "num_trades": 4,
+    "average_holding_days": 5.0
   },
   {
     "ticker": "NYSE:RBRK",
@@ -388,7 +542,14 @@
       "skip_dates": [],
       "stop_loss_atr_multiplier": 0,
       "stop_loss_pct": 0.05
-    }
+    },
+    "sharpe": 0.07725295879517431,
+    "max_drawdown": 2.636279394582387,
+    "win_rate": 1.0,
+    "cumulative_return": 0.10292160000000017,
+    "sum_holding_days": 15,
+    "num_trades": 1,
+    "average_holding_days": 11.0
   },
   {
     "ticker": "NASDAQ:CIFR",
@@ -405,7 +566,14 @@
       "skip_dates": [],
       "stop_loss_atr_multiplier": 0,
       "stop_loss_pct": 0.05
-    }
+    },
+    "sharpe": 0.11566516539405369,
+    "max_drawdown": 3.260174577484843,
+    "win_rate": 1.0,
+    "cumulative_return": 0.48362205000000036,
+    "sum_holding_days": 15,
+    "num_trades": 4,
+    "average_holding_days": 2.75
   },
   {
     "ticker": "NASDAQ:SOFI",
@@ -422,7 +590,14 @@
       "skip_dates": [],
       "stop_loss_atr_multiplier": 0,
       "stop_loss_pct": 0.05
-    }
+    },
+    "sharpe": 0.08204091394093548,
+    "max_drawdown": 0.0,
+    "win_rate": 1.0,
+    "cumulative_return": 0.09910699999999983,
+    "sum_holding_days": 2,
+    "num_trades": 1,
+    "average_holding_days": 2.0
   },
   {
     "ticker": "NASDAQ:IBIT",
@@ -439,7 +614,14 @@
       "skip_dates": [],
       "stop_loss_atr_multiplier": 0,
       "stop_loss_pct": 0.05
-    }
+    },
+    "sharpe": 0.1044831917814497,
+    "max_drawdown": 3.1715134126281344,
+    "win_rate": 1.0,
+    "cumulative_return": 0.17852449999999953,
+    "sum_holding_days": 35,
+    "num_trades": 4,
+    "average_holding_days": 6.0
   },
   {
     "ticker": "NYSE:IONQ",
@@ -456,7 +638,14 @@
       "skip_dates": [],
       "stop_loss_atr_multiplier": 0,
       "stop_loss_pct": 0.05
-    }
+    },
+    "sharpe": 0.09736914909882644,
+    "max_drawdown": 8.428167804143037,
+    "win_rate": 0.6666666666666666,
+    "cumulative_return": 0.3062887000000001,
+    "sum_holding_days": 16,
+    "num_trades": 3,
+    "average_holding_days": 6.0
   },
   {
     "ticker": "NASDAQ:TMDX",
@@ -473,7 +662,14 @@
       "skip_dates": [],
       "stop_loss_atr_multiplier": 0,
       "stop_loss_pct": 0.05
-    }
+    },
+    "sharpe": 0.12859740692435825,
+    "max_drawdown": 2.09935809750351,
+    "win_rate": 1.0,
+    "cumulative_return": 0.23137759999999985,
+    "sum_holding_days": 19,
+    "num_trades": 2,
+    "average_holding_days": 6.5
   },
   {
     "ticker": "NASDAQ:TSLA",
@@ -490,7 +686,14 @@
       "skip_dates": [],
       "stop_loss_atr_multiplier": 0,
       "stop_loss_pct": 0.05
-    }
+    },
+    "sharpe": 0.11384089765060579,
+    "max_drawdown": 4.030524159770832,
+    "win_rate": 1.0,
+    "cumulative_return": 0.1899090999999995,
+    "sum_holding_days": 16,
+    "num_trades": 6,
+    "average_holding_days": 2.3333333333333335
   },
   {
     "ticker": "NASDAQ:BND",
@@ -507,7 +710,14 @@
       "skip_dates": [],
       "stop_loss_atr_multiplier": 0,
       "stop_loss_pct": 0.05
-    }
+    },
+    "sharpe": 0.005314340967277868,
+    "max_drawdown": 0.1691882763543413,
+    "win_rate": 0.75,
+    "cumulative_return": 0.010428649999999928,
+    "sum_holding_days": 20,
+    "num_trades": 4,
+    "average_holding_days": 3.5
   },
   {
     "ticker": "NYSEARCA:MGK",
@@ -524,7 +734,14 @@
       "skip_dates": [],
       "stop_loss_atr_multiplier": 0,
       "stop_loss_pct": 0.05
-    }
+    },
+    "sharpe": 0.05684521164243158,
+    "max_drawdown": 0.768616414876398,
+    "win_rate": 1.0,
+    "cumulative_return": 0.029826300000000305,
+    "sum_holding_days": 14,
+    "num_trades": 2,
+    "average_holding_days": 5.0
   },
   {
     "ticker": "NYSEARCA:SIVR",
@@ -541,7 +758,14 @@
       "skip_dates": [],
       "stop_loss_atr_multiplier": 0,
       "stop_loss_pct": 0.05
-    }
+    },
+    "sharpe": 0.04053669647449461,
+    "max_drawdown": 0.0,
+    "win_rate": 0.0,
+    "cumulative_return": 0.018391100000000105,
+    "sum_holding_days": 0,
+    "num_trades": 1,
+    "average_holding_days": 0
   },
   {
     "ticker": "NYSEARCA:VOO",
@@ -558,6 +782,13 @@
       "skip_dates": [],
       "stop_loss_atr_multiplier": 0,
       "stop_loss_pct": 0.05
-    }
+    },
+    "sharpe": 0.06756842011532312,
+    "max_drawdown": 0.5998000338815576,
+    "win_rate": 1.0,
+    "cumulative_return": 0.025981299999999985,
+    "sum_holding_days": 10,
+    "num_trades": 2,
+    "average_holding_days": 4.0
   }
 ]
