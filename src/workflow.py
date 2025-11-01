@@ -362,51 +362,6 @@ def opt_strategy(filename: str = Config.YFINANCE_FILE_NAME):
     for x in watch_list:
         print_backtest_result(level=logging.INFO, bt_result=x["bt_result"], num_transactions=5)
 
-def check_target():
-    logger = init_logger("backtrader.log")
-    dataframe =  Dataloader.read_csv()
-
-    target_list = Config.WATCH_TARGETS
-    opt_args = Config.OPT_PARAMETERS_BB_MR
-
-    opt_strategy = BollingerBandsMeanReversion
-
-    num_transactions = 5
-    errors = []
-    result_list = []
-    for ticker in target_list:
-        print(f"開始優化 {ticker} 的策略參數")
-        best_result = None
-        try:
-            best_result = run_optimization_once(dataframe, ticker, opt_strategy, False, num_transactions, "annual_return", opt_args)
-        except Exception as e:
-            print(f"⚠️ 優化 {ticker} 時發生錯誤: {e}")
-            logger.error(f"⚠️ 優化 {ticker} 時發生錯誤: {e}")
-            errors.append({"ticker": ticker, "error": str(e)})
-            continue
-        if best_result is not None and best_result['sharpe'] != -float('inf'):
-            sharpe = best_result["sharpe"]
-         
-
-            print_backtest_result(level=logging.DEBUG, bt_result=best_result, num_transactions=5, filename=f"{ticker}/tutle_strategy.log")
-       
-
-            df_trades = []
-        # print last x trades
-            strat = best_result["strat"]                 
-                    
-            df_trades = pd.DataFrame(strat.signal_list)
-            max_trade_date = df_trades['date'].max()
-            #check if max_trade_date is greater than 2025-03-22
-            #if ( df_trades['action'].iloc[-1] == -1 ):
-                #and max_trade_date > five_days_ago_str
-            result_list.append({"ticker": ticker, "bt_result": best_result})
-
-        print(f"結束優化 {ticker} 的策略參數")
-
-    print("🎉 優化完成！")
-    for x in result_list:
-        print_backtest_result(level=logging.INFO, bt_result=x["bt_result"], num_transactions=5)
 
 def download_data(start_date=None, end_date=None):
     """

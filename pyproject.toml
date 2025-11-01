@@ -22,7 +22,6 @@ dependencies = [
 [project.scripts]
 opt_strategy = "workflow:main"
 simulate = "sj_trading.simulation:simulate"
-check_target = "workflow:check_target"
 download_data = "workflow:download_data_cli"
 generate_google_query = "generate_query:main"
 zip = "zip:zip_project_folder"
