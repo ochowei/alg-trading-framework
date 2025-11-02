@@ -22,7 +22,7 @@ from sj_trading.commissions import TaiwanStockCommission
 
 
 # 參數優化
-def run_optimization_once(df:pd.DataFrame, ticker:str, strategy:bt.Strategy, print_strat:bool=False, num_transactions:int=5, performance_target:str=Config.PERFORMANCE_TARGET, opt_args=Config.OPT_PARAMETERS_TUTLE_4_1):
+def run_optimization_ticker(df:pd.DataFrame, ticker:str, strategy:bt.Strategy, print_strat:bool=False, num_transactions:int=5, performance_target:str=Config.PERFORMANCE_TARGET, opt_args=Config.OPT_PARAMETERS_TUTLE_4_1):
     cerebro = bt.Cerebro(optreturn=False)
     # 下載並載入數據
     start = Config.ONE_THOUSAND_DAYS_AGO.strftime('%Y-%m-%d')
@@ -271,7 +271,7 @@ def opt_strategy(filename: str = Config.YFINANCE_FILE_NAME):
         print(f"開始優化 {ticker} 的策略參數")
         best_result = None
         try:
-            best_result = run_optimization_once(dataframe, ticker, opt_strategy, False, num_transactions, "annual_return", opt_args=opt_args)
+            best_result = run_optimization_ticker(dataframe, ticker, opt_strategy, False, num_transactions, "annual_return", opt_args=opt_args)
         except Exception as e:
             print(f"⚠️ 優化 {ticker} 時發生錯誤: {e}")
             logger.error(f"⚠️ 優化 {ticker} 時發生錯誤: {e}")
