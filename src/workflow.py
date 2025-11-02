@@ -253,7 +253,7 @@ import argparse
 def opt_strategy(filename: str = Config.YFINANCE_FILE_NAME, start_date: str = None, end_date: str = None):
     dataframe =  Dataloader.read_csv(filename)
     if dataframe.empty:
-        print(f"無法從 {filename} 讀取到數據，lookup_target 中止。")
+        print(f"無法從 {filename} 讀取到數據，opt_strategy 中止。")
         return
   
     tickers = Dataloader.list_tickers(dataframe)
