@@ -22,15 +22,22 @@ from sj_trading.commissions import TaiwanStockCommission
 
 
 # 參數優化
-def run_optimization_ticker(df:pd.DataFrame, ticker:str, strategy:bt.Strategy, print_strat:bool=False, num_transactions:int=5, performance_target:str=Config.PERFORMANCE_TARGET, opt_args=Config.OPT_PARAMETERS_TUTLE_4_1):
+def run_optimization_ticker(
+    df: pd.DataFrame,
+    ticker: str,
+    strategy: bt.Strategy,
+    start_date: str,
+    end_date: str,
+    print_strat: bool = False,
+    num_transactions: int = 5,
+    performance_target: str = Config.PERFORMANCE_TARGET,
+    opt_args=Config.OPT_PARAMETERS_TUTLE_4_1
+):
     cerebro = bt.Cerebro(optreturn=False)
     # 下載並載入數據
-    start = Config.ONE_THOUSAND_DAYS_AGO.strftime('%Y-%m-%d')
-    end = Config.ONE_WEEK_LATER.strftime('%Y-%m-%d')
-    # end = one_week_later.strftime('%Y-%m-%d')
-    print(f"start: {start}, end: {end}")
+    print(f"start: {start_date}, end: {end_date}")
 
-    data_1 = Dataloader.from_csv_df(df=df, symbol=ticker, start=Config.ONE_THOUSAND_DAYS_AGO.strftime('%Y-%m-%d'), end=end)
+    data_1 = Dataloader.from_csv_df(df=df, symbol=ticker, start=start_date, end=end_date)
     # stock = yf.Ticker(ticker)
     # check if data_1 is Less than 1
     if data_1 is None:
@@ -245,7 +252,7 @@ def print_backtest_result(bt_result, num_transactions: int, level=logging.INFO, 
 
 import argparse
 
-def opt_strategy(filename: str = Config.YFINANCE_FILE_NAME):
+def opt_strategy(filename: str = Config.YFINANCE_FILE_NAME, start_date: str = None, end_date: str = None):
     dataframe =  Dataloader.read_csv(filename)
     if dataframe.empty:
         print(f"無法從 {filename} 讀取到數據，lookup_target 中止。")
@@ -271,7 +278,14 @@ def opt_strategy(filename: str = Config.YFINANCE_FILE_NAME):
         print(f"開始優化 {ticker} 的策略參數")
         best_result = None
         try:
-            best_result = run_optimization_ticker(dataframe, ticker, opt_strategy, False, num_transactions, "annual_return", opt_args=opt_args)
+            best_result = run_optimization_ticker(
+                df=dataframe,
+                ticker=ticker,
+                strategy=opt_strategy,
+                start_date=start_date,
+                end_date=end_date,
+                opt_args=opt_args
+            )
         except Exception as e:
             print(f"⚠️ 優化 {ticker} 時發生錯誤: {e}")
             logger.error(f"⚠️ 優化 {ticker} 時發生錯誤: {e}")
@@ -460,18 +474,42 @@ def main():
     """
     parser = argparse.ArgumentParser(description="演算法交易框架 - 策略回測優化")
 
+    # 預設的回測日期
+    default_start_date = (datetime.now() - timedelta(days=365)).strftime('%Y-%m-%d')
+    default_end_date = (datetime.now() + timedelta(days=7)).strftime('%Y-%m-%d')
+
     parser.add_argument(
         "--filename",
         type=str,
         default=Config.YFINANCE_FILE_NAME,
         help=f"要讀取的 CSV 資料檔案路徑 (預設: {Config.YFINANCE_FILE_NAME})"
     )
+    parser.add_argument(
+        "--start-date",
+        type=str,
+        default=default_start_date,
+        help=f"回測開始日期 (格式: YYYY-MM-DD，預設: {default_start_date})"
+    )
+    parser.add_argument(
+        "--end-date",
+        type=str,
+        default=default_end_date,
+        help=f"回測結束日期 (格式: YYYY-MM-DD，預設: {default_end_date})"
+    )
 
     args = parser.parse_args()
 
-    print(f"🔄 開始執行 opt_strategy，使用資料檔案: {args.filename}")
+    # 驗證日期格式
+    for date_str in [args.start_date, args.end_date]:
+        if date_str:
+            try:
+                datetime.strptime(date_str, '%Y-%m-%d')
+            except ValueError:
+                parser.error(f"日期格式錯誤: {date_str}。請使用 YYYY-MM-DD 格式。")
 
-    opt_strategy(filename=args.filename)
+    print(f"🔄 開始執行 opt_strategy，使用資料檔案: {args.filename}, 日期範圍: {args.start_date} to {args.end_date}")
+
+    opt_strategy(filename=args.filename, start_date=args.start_date, end_date=args.end_date)
 
 
 
