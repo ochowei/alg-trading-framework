@@ -23,7 +23,6 @@ dependencies = [
 opt_strategy = "workflow:main"
 simulate = "sj_trading.simulation:simulate"
 download_data = "sj_trading.download_data:download_data_cli"
-generate_google_query = "generate_query:main"
 zip = "zip:zip_project_folder"
 run_strategy = "run_strategy:run_strategy_cli"
 
