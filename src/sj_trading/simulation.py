@@ -71,8 +71,10 @@ class SimulationStrategy(ABC):
 
 class Mode1Strategy(SimulationStrategy):
     """
-    Implements Mode 1 simulation logic.
-    - Executes on T-day signals (Action 2, -2) using T-day prices.
+    Implements Mode 1 simulation logic (default).
+    - Signals (Action 2, -2) are generated on T-day and executed on T-day at T-day's prices.
+    - Buy (2): Divides all available cash equally to buy signaled stocks.
+    - Sell (-2): Sells all holdings of signaled stocks.
     """
     def run_simulation(self, df: pd.DataFrame):
         print("--- 模擬開始 (Mode: 1) ---")
@@ -183,7 +185,10 @@ class Mode1Strategy(SimulationStrategy):
 class Mode2Strategy(SimulationStrategy):
     """
     Implements Mode 2 simulation logic.
-    - Executes on T-day using T-1 day signals (Action 1, 3, -1, -3) and T-1 day prices.
+    - Signals (Action 1, 3, -1, -3) are generated on T-1 day and executed on T-day.
+    - Uses the price from the T-1 day signal for execution on T-day.
+    - Buy (1, 3): Divides all available cash on T-day to buy stocks from T-1 day's signals.
+    - Sell (-1, -3): Sells all holdings of stocks from T-1 day's signals.
     """
     def run_simulation(self, df: pd.DataFrame):
         print("--- 模擬開始 (Mode: 2) ---")
@@ -304,7 +309,20 @@ class Mode2Strategy(SimulationStrategy):
 
 def simulate_trades(file_path, initial_capital, show_non_executed_orders=False, mode=1):
     """
-    Simulates trades based on the specified mode by selecting the appropriate strategy.
+    Acts as a factory to select and execute a trade simulation strategy based on the given mode.
+
+    This function reads a JSON file containing trade signals, sorts them by date,
+    and then delegates the simulation to a specific strategy class (`Mode1Strategy`
+    or `Mode2Strategy`).
+
+    Args:
+        file_path (str): The path to the JSON file with trade signals.
+        initial_capital (float or str): The starting capital for the simulation.
+        show_non_executed_orders (bool): If True, prints signals that were not acted upon.
+        mode (int): The simulation mode to use (1 or 2).
+
+    Returns:
+        Decimal: The final total balance of the portfolio.
     """
     try:
         df = pd.read_json(file_path)
