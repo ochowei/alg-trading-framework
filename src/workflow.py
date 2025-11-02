@@ -456,7 +456,7 @@ def download_data_cli():
 
 def main():
     """
-    主執行入口點，用於解析命令列參數並執行 lookup_target。
+    主執行入口點，用於解析命令列參數並執行 opt_strategy
     """
     parser = argparse.ArgumentParser(description="演算法交易框架 - 策略回測優化")
 
@@ -469,7 +469,7 @@ def main():
 
     args = parser.parse_args()
 
-    print(f"🔄 開始執行 lookup_target，使用資料檔案: {args.filename}")
+    print(f"🔄 開始執行 opt_strategy，使用資料檔案: {args.filename}")
 
     opt_strategy(filename=args.filename)
 
