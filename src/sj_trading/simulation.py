@@ -71,10 +71,10 @@ class SimulationStrategy(ABC):
 
 class Mode1Strategy(SimulationStrategy):
     """
-    Implements Mode 1 simulation logic (default).
-    - Signals (Action 2, -2) are generated on T-day and executed on T-day at T-day's prices.
-    - Buy (2): Divides all available cash equally to buy signaled stocks.
-    - Sell (-2): Sells all holdings of signaled stocks.
+    實作模式 1 的模擬邏輯（預設）。
+    - 訊號（Action 2, -2）在 T 日產生，並在 T 日以 T 日的價格執行。
+    - 買入（2）：將所有可用現金平均分配，用於買入訊號股。
+    - 賣出（-2）：賣出訊號股的所有持股。
     """
     def run_simulation(self, df: pd.DataFrame):
         print("--- 模擬開始 (Mode: 1) ---")
@@ -184,11 +184,11 @@ class Mode1Strategy(SimulationStrategy):
 
 class Mode2Strategy(SimulationStrategy):
     """
-    Implements Mode 2 simulation logic.
-    - Signals (Action 1, 3, -1, -3) are generated on T-1 day and executed on T-day.
-    - Uses the price from the T-1 day signal for execution on T-day.
-    - Buy (1, 3): Divides all available cash on T-day to buy stocks from T-1 day's signals.
-    - Sell (-1, -3): Sells all holdings of stocks from T-1 day's signals.
+    實作模式 2 的模擬邏輯。
+    - 訊號（Action 1, 3, -1, -3）在 T-1 日產生，並在 T 日執行。
+    - 使用 T-1 日訊號中的價格作為 T 日的執行價格。
+    - 買入（1, 3）：將 T 日的所有可用現金平均分配，用於買入 T-1 日的訊號股。
+    - 賣出（-1, -3）：賣出 T-1 日訊號股的所有持股。
     """
     def run_simulation(self, df: pd.DataFrame):
         print("--- 模擬開始 (Mode: 2) ---")
@@ -309,20 +309,19 @@ class Mode2Strategy(SimulationStrategy):
 
 def simulate_trades(file_path, initial_capital, show_non_executed_orders=False, mode=1):
     """
-    Acts as a factory to select and execute a trade simulation strategy based on the given mode.
+    根據給定的模式，作為工廠選擇並執行交易模擬策略。
 
-    This function reads a JSON file containing trade signals, sorts them by date,
-    and then delegates the simulation to a specific strategy class (`Mode1Strategy`
-    or `Mode2Strategy`).
+    此函數讀取包含交易訊號的 JSON 檔案，按日期排序，
+    然後將模擬委託給特定的策略類別（`Mode1Strategy` 或 `Mode2Strategy`）。
 
     Args:
-        file_path (str): The path to the JSON file with trade signals.
-        initial_capital (float or str): The starting capital for the simulation.
-        show_non_executed_orders (bool): If True, prints signals that were not acted upon.
-        mode (int): The simulation mode to use (1 or 2).
+        file_path (str): 包含交易訊號的 JSON 檔案路徑。
+        initial_capital (float or str): 模擬的初始資金。
+        show_non_executed_orders (bool): 如果為 True，則會印出未執行的訊號。
+        mode (int): 要使用的模擬模式（1 或 2）。
 
     Returns:
-        Decimal: The final total balance of the portfolio.
+        Decimal: 投資組合的最終總餘額。
     """
     try:
         df = pd.read_json(file_path)
