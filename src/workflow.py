@@ -24,7 +24,6 @@ from sj_trading.commissions import TaiwanStockCommission
 # 參數優化
 def run_optimization_once(df:pd.DataFrame, ticker:str, strategy:bt.Strategy, print_strat:bool=False, num_transactions:int=5, performance_target:str=Config.PERFORMANCE_TARGET, opt_args=Config.OPT_PARAMETERS_TUTLE_4_1):
     cerebro = bt.Cerebro(optreturn=False)
-    # trace list: 0050, 2330, 0052, 元大全球 AI（00762）, 00737(國泰全球 AI), 00757(統一 FANG+ ETF)* 00635U.TW(期元大S&P黃金)*
     # 下載並載入數據
     start = Config.ONE_THOUSAND_DAYS_AGO.strftime('%Y-%m-%d')
     end = Config.ONE_WEEK_LATER.strftime('%Y-%m-%d')
@@ -251,9 +250,7 @@ def opt_strategy(filename: str = Config.YFINANCE_FILE_NAME):
     if dataframe.empty:
         print(f"無法從 {filename} 讀取到數據，lookup_target 中止。")
         return
-    # tutle 4.1 trace list: 0050.TW, 2330.TW, 00757, 00635U.TW, 00893.TW, 00895.TW
-    ticker_list_1 = ['00893.TW'] # 第一關注目標
-    ticker_list_2 = ['0050.TW', '2330.TW', '00737.TW', '00635U.TW'] # 第二關注目標
+  
     tickers = Dataloader.list_tickers(dataframe)
     logger = init_logger("backtrader.log")
     target_list = tickers
@@ -359,8 +356,8 @@ def opt_strategy(filename: str = Config.YFINANCE_FILE_NAME):
         for error in errors:
             print(f"股票代號: {error['ticker']}, 錯誤: {error['error']}")
     print("🎉 優化完成！")
-    for x in watch_list:
-        print_backtest_result(level=logging.INFO, bt_result=x["bt_result"], num_transactions=5)
+    # for x in watch_list:
+    #     print_backtest_result(level=logging.INFO, bt_result=x["bt_result"], num_transactions=5)
 
 
 def download_data(start_date=None, end_date=None):
