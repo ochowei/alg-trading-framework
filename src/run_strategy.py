@@ -64,48 +64,23 @@ def run_strategy_once(df: pd.DataFrame, ticker: str, strategy_class: bt.Strategy
         return []
 
 
-def run_strategy_cli():
+def run_strategy_logic(data_file, input_file, output_file, start_date=None, end_date=None, skip_dates=None):
     """
-    CLI 進入點，用於根據儲存的最佳參數重新執行策略。
+    The core logic for running the strategy backtest.
     """
-    parser = argparse.ArgumentParser(description="使用最佳化後的參數執行單次回測，並產生交易訊號。")
-    parser.add_argument(
-        "--data-file",
-        type=str,
-        default=Config.YFINANCE_FILE_NAME,
-        help=f"包含市場數據的 CSV 檔案 (預設: {Config.YFINANCE_FILE_NAME})"
-    )
-    parser.add_argument(
-        "--input-file",
-        type=str,
-        default="output/best_strategy_params.json",
-        help="包含最佳策略參數的 JSON 檔案 (預設: output/best_strategy_params.json)"
-    )
-    parser.add_argument(
-        "--output-file",
-        type=str,
-        default="output/strategy_trades.json",
-        help="儲存交易訊號的輸出 JSON 檔案 (預設: output/strategy_trades.json)"
-    )
-    parser.add_argument("--start-date", type=str, help="覆寫所有策略的開始日期 (YYYY-MM-DD)。")
-    parser.add_argument("--end-date", type=str, help="覆寫所有策略的結束日期 (YYYY-MM-DD)。")
-    parser.add_argument("--skip-dates", type=str, help="覆寫所有策略要跳過的日期 (YYYY-MM-DD,YYYY-MM-DD)。")
-
-    args = parser.parse_args()
-
     # 1. 讀取參數檔案
     try:
-        with open(args.input_file, 'r', encoding='utf-8') as f:
+        with open(input_file, 'r', encoding='utf-8') as f:
             params_data = json.load(f)
         params_map = {item['ticker']: item for item in params_data}
     except (FileNotFoundError, json.JSONDecodeError) as e:
-        print(f"錯誤: 無法讀取或解析參數檔案 '{args.input_file}': {e}")
+        print(f"錯誤: 無法讀取或解析參數檔案 '{input_file}': {e}")
         return
 
     # 2. 讀取市場數據
-    dataframe = Dataloader.read_csv(args.data_file)
+    dataframe = Dataloader.read_csv(data_file)
     if dataframe.empty:
-        print(f"錯誤: 無法從 '{args.data_file}' 讀取數據。")
+        print(f"錯誤: 無法從 '{data_file}' 讀取數據。")
         return
 
     # 3. 獲取 Ticker 列表
@@ -123,7 +98,7 @@ def run_strategy_cli():
     # 5. 遍歷 Ticker 並執行策略
     for ticker in target_list:
         if ticker not in params_map:
-            print(f"警告: 在 '{args.input_file}' 中找不到 {ticker} 的參數，已跳過。")
+            print(f"警告: 在 '{input_file}' 中找不到 {ticker} 的參數，已跳過。")
             continue
 
         config = params_map[ticker]
@@ -136,13 +111,14 @@ def run_strategy_cli():
 
         # 參數覆寫與轉換
         date_params = ['start_date', 'end_date']
+        cli_dates = {'start_date': start_date, 'end_date': end_date}
         for p in date_params:
             # 優先使用 CLI 參數
-            if getattr(args, p):
+            if cli_dates[p]:
                 try:
-                    parameters[p] = datetime.strptime(getattr(args, p), '%Y-%m-%d')
+                    parameters[p] = datetime.strptime(cli_dates[p], '%Y-%m-%d')
                 except (ValueError, TypeError):
-                    print(f"警告: CLI 的日期格式 '{getattr(args, p)}' 不正確，應為 YYYY-MM-DD。")
+                    print(f"警告: CLI 的日期格式 '{cli_dates[p]}' 不正確，應為 YYYY-MM-DD。")
             # 否則，如果 JSON 中有字串，也進行轉換
             elif p in parameters and isinstance(parameters[p], str):
                 try:
@@ -150,12 +126,12 @@ def run_strategy_cli():
                 except (ValueError, TypeError):
                     print(f"警告: JSON 中的日期格式 '{parameters[p]}' 不正確，應為 YYYY-MM-DD。")
 
-        if args.skip_dates:
+        if skip_dates:
             try:
                 parameters['skip_dates'] = [datetime.strptime(d.strip(), '%Y-%m-%d').date() for d in
-                                            args.skip_dates.split(',')]
+                                            skip_dates.split(',')]
             except ValueError:
-                print(f"警告: skip_dates 的日期格式 '{args.skip_dates}' 不正確，應為 YYYY-MM-DD,YYYY-MM-DD。")
+                print(f"警告: skip_dates 的日期格式 '{skip_dates}' 不正確，應為 YYYY-MM-DD,YYYY-MM-DD。")
         elif 'skip_dates' in parameters and isinstance(parameters['skip_dates'], list):
             # 如果 JSON 中有 skip_dates, 轉換裡面的日期字串
             try:
@@ -184,12 +160,51 @@ def run_strategy_cli():
     if all_trades:
         all_trades.sort(key=lambda x: x['date'])
 
-        output_dir = Path(args.output_file).parent
+        output_dir = Path(output_file).parent
         output_dir.mkdir(parents=True, exist_ok=True)
 
-        with open(args.output_file, 'w', encoding='utf-8') as f:
+        with open(output_file, 'w', encoding='utf-8') as f:
             json.dump(all_trades, f, ensure_ascii=False, indent=2)
 
-        print(f"✅ 策略執行完畢，共產生 {len(all_trades)} 筆交易訊號，已儲存至 {args.output_file}")
+        print(f"✅ 策略執行完畢，共產生 {len(all_trades)} 筆交易訊號，已儲存至 {output_file}")
     else:
         print("所有策略執行完畢，但未產生任何交易訊號。")
+
+
+def run_strategy_cli():
+    """
+    CLI 進入點，用於根據儲存的最佳參數重新執行策略。
+    """
+    parser = argparse.ArgumentParser(description="使用最佳化後的參數執行單洄測，並產生交易訊號。")
+    parser.add_argument(
+        "--data-file",
+        type=str,
+        default=Config.YFINANCE_FILE_NAME,
+        help=f"包含市場數據的 CSV 檔案 (預設: {Config.YFINANCE_FILE_NAME})"
+    )
+    parser.add_argument(
+        "--input-file",
+        type=str,
+        default="output/best_strategy_params.json",
+        help="包含最佳策略參數的 JSON 檔案 (預設: output/best_strategy_params.json)"
+    )
+    parser.add_argument(
+        "--output-file",
+        type=str,
+        default="output/strategy_trades.json",
+        help="儲存交易訊號的輸出 JSON 檔案 (預設: output/strategy_trades.json)"
+    )
+    parser.add_argument("--start-date", type=str, help="覆寫所有策略的開始日期 (YYYY-MM-DD)。")
+    parser.add_argument("--end-date", type=str, help="覆寫所有策略的結束日期 (YYYY-MM-DD)。")
+    parser.add_argument("--skip-dates", type=str, help="覆寫所有策略要跳過的日期 (YYYY-MM-DD,YYYY-MM-DD)。")
+
+    args = parser.parse_args()
+
+    run_strategy_logic(
+        data_file=args.data_file,
+        input_file=args.input_file,
+        output_file=args.output_file,
+        start_date=args.start_date,
+        end_date=args.end_date,
+        skip_dates=args.skip_dates
+    )
