@@ -10,7 +10,7 @@ class Config:
 
     # 常量
     PERFORMANCE_TARGET = "sharpe"
-    YFINANCE_FILE_NAME = "combined_stock_data.csv"
+    YFINANCE_FILE_NAME = "backup/stock_price.csv"
 
     # 監控清單
     WATCH_TARGETS = []
