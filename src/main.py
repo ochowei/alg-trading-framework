@@ -2,6 +2,7 @@ import click
 from rich.console import Console
 from rich.panel import Panel
 from rich.prompt import Prompt
+from prompt_toolkit import prompt as toolkit_prompt
 from prompt_toolkit.completion import PathCompleter
 from datetime import datetime, timedelta
 
@@ -16,6 +17,7 @@ def show_interactive_menu():
     Displays the interactive main menu and executes the selected workflow.
     """
     console = Console()
+    path_completer = PathCompleter()
 
     while True:
         console.print(Panel.fit(
@@ -32,8 +34,9 @@ def show_interactive_menu():
         if choice == "1":
             console.print("\n[bold yellow]執行策略優化...[/bold yellow]\n")
             try:
-                filename = Prompt.ask(
-                    "請輸入資料檔案路徑",
+                filename = toolkit_prompt(
+                    "請輸入資料檔案路徑: ",
+                    completer=path_completer,
                     default=Config.YFINANCE_FILE_NAME
                 )
                 start_date = Prompt.ask(
@@ -50,16 +53,19 @@ def show_interactive_menu():
         elif choice == "2":
             console.print("\n[bold yellow]執行策略回測...[/bold yellow]\n")
             try:
-                data_file = Prompt.ask(
-                    "請輸入市場數據 CSV 檔案",
+                data_file = toolkit_prompt(
+                    "請輸入市場數據 CSV 檔案: ",
+                    completer=path_completer,
                     default=Config.YFINANCE_FILE_NAME
                 )
-                input_file = Prompt.ask(
-                    "請輸入策略參數 JSON 檔案",
+                input_file = toolkit_prompt(
+                    "請輸入策略參數 JSON 檔案: ",
+                    completer=path_completer,
                     default="output/best_strategy_params.json"
                 )
-                output_file = Prompt.ask(
-                    "請輸入儲存交易訊號的 JSON 檔案",
+                output_file = toolkit_prompt(
+                    "請輸入儲存交易訊號的 JSON 檔案: ",
+                    completer=path_completer,
                     default="output/strategy_trades.json"
                 )
                 start_date = Prompt.ask("請輸入開始日期 (YYYY-MM-DD) [可選]", default="")
@@ -79,6 +85,7 @@ def show_interactive_menu():
         elif choice == "3":
             console.print("\n[bold yellow]執行交易模擬...[/bold yellow]\n")
             try:
+                # Let the original click command handle its own prompts
                 simulate_cli.main(standalone_mode=False)
             except click.exceptions.Abort:
                  console.print("\n[bold red]操作中止。[/bold red]")
