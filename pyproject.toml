@@ -20,6 +20,7 @@ dependencies = [
 ]
 
 [project.scripts]
+main = "main:main"
 opt_strategy = "workflow:main"
 simulate = "sj_trading.simulation:simulate"
 download_data = "sj_trading.download_data:download_data_cli"
