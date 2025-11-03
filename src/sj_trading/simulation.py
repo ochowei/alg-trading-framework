@@ -347,7 +347,7 @@ def simulate_trades(file_path, initial_capital, show_non_executed_orders=False, 
 @click.option(
     "--file-path",
     type=click.Path(exists=True, dir_okay=False, readable=True),
-    default=None,
+    default='output/strategy_trades.json',
     help="包含交易訊號的 JSON 檔案路徑。"
 )
 @click.option(
@@ -375,10 +375,10 @@ def simulate(file_path, initial_capital, show_none_execute_order, mode):
         file_path = prompt(
             "請輸入 JSON 檔案路徑: ",
             completer=PathCompleter(),
-            default='output/best_strategy_trades.json'
+            default='output/strategy_trades.json'
         )
         initial_capital = click.prompt("請輸入初始資金", type=float, default=10000.0)
-        show_none_execute_order = click.confirm("是否顯示 '無執行' 的買入/賣出訊號?", default=False)
+        show_none_execute_order = click.confirm("是否顯示 '無執行' 的買入/賣出訊號?", default=True)
         mode = click.prompt("請輸入模擬模式 (1: T日執行 2/-2, 2: T日執行 T-1日的 1/3/-1/-3)", type=click.IntRange(1, 2), default=1)
 
 
