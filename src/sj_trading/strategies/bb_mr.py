@@ -178,7 +178,7 @@ class BollingerBandsMeanReversion(bt.Strategy):
             self.order = None
 
             if order.isbuy():
-                self.signal_list.append({ "date": f"{trade_date}", "action": 2, "size": size, "price": price, "total": -size * price, "pnl": pnl, "BB_Period": self.params.bb_period, "Dev_Factor": self.params.bb_devfactor })
+                self.signal_list.append({ "date": f"{trade_date}", "action": 2, "size": size, "price": price, "total": -size * price, "pnl": pnl})
                 stop_price = 0
                 log_msg = ""
 
@@ -195,7 +195,7 @@ class BollingerBandsMeanReversion(bt.Strategy):
                 #     self.logger.debug(log_msg)
 
             elif order.issell():
-                self.signal_list.append({ "date": f"{trade_date}", "action": -2, "size": size, "price": price, "total": -size * price, "pnl": pnl,  "BB_Period": self.params.bb_period, "Dev_Factor": self.params.bb_devfactor })
+                self.signal_list.append({ "date": f"{trade_date}", "action": -2, "size": size, "price": price, "total": -size * price, "pnl": pnl })
                 self.stop_loss_order = None
 
         elif order.status in [order.Canceled, order.Margin, order.Rejected]:
