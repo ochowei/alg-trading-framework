@@ -9,7 +9,7 @@ from datetime import datetime, timedelta
 # Import the functions from other scripts
 from workflow import main as workflow_main, opt_strategy
 from run_strategy import run_strategy_logic
-from sj_trading.simulation import simulate as simulate_cli
+from sj_trading.simulation import simulate as simulate_cli, simulate_trades
 from sj_trading.config import Config
 
 def show_interactive_menu():
@@ -85,8 +85,32 @@ def show_interactive_menu():
         elif choice == "3":
             console.print("\n[bold yellow]執行交易模擬...[/bold yellow]\n")
             try:
-                # Let the original click command handle its own prompts
-                simulate_cli.main(standalone_mode=False)
+                file_path = toolkit_prompt(
+                    "請輸入交易訊號 JSON 檔案路徑: ",
+                    completer=path_completer,
+                    default='output/strategy_trades.json'
+                )
+                initial_capital = Prompt.ask(
+                    "請輸入初始資金",
+                    default="10000.0"
+                )
+                show_none_execute_order_str = Prompt.ask(
+                    "是否顯示未執行訂單? (y/n)",
+                    choices=["y", "n"],
+                    default="n"
+                )
+                mode = Prompt.ask(
+                    "請選擇模擬模式",
+                    choices=["1", "2"],
+                    default="1"
+                )
+
+                simulate_trades(
+                    file_path=file_path,
+                    initial_capital=float(initial_capital),
+                    show_non_executed_orders=(show_none_execute_order_str.lower() == 'y'),
+                    mode=int(mode)
+                )
             except click.exceptions.Abort:
                  console.print("\n[bold red]操作中止。[/bold red]")
             except Exception as e:
