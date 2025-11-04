@@ -1,4 +1,3 @@
-import argparse
 import json
 import os
 from datetime import datetime, timedelta
@@ -74,31 +73,3 @@ def download_data(start_date=None, end_date=None):
     print(f"✅ 資料已成功儲存至 {output_filename}")
 
 
-def download_data_cli():
-    """
-    為 download_data 提供命令列介面。
-    """
-    parser = argparse.ArgumentParser(description="下載 yfinance 股價資料")
-    parser.add_argument(
-        "--start-date",
-        type=str,
-        default=None,
-        help="下載開始日期 (格式: YYYY-MM-DD)。預設為 1000 天前。"
-    )
-    parser.add_argument(
-        "--end-date",
-        type=str,
-        default=None,
-        help="下載結束日期 (格式: YYYY-MM-DD)。預設為 7 天後。"
-    )
-    args = parser.parse_args()
-
-    # 驗證日期格式
-    for date_str in [args.start_date, args.end_date]:
-        if date_str:
-            try:
-                datetime.strptime(date_str, '%Y-%m-%d')
-            except ValueError:
-                parser.error(f"日期格式錯誤: {date_str}。請使用 YYYY-MM-DD 格式。")
-
-    download_data(start_date=args.start_date, end_date=args.end_date)

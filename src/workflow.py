@@ -1,4 +1,3 @@
-import argparse
 import backtrader as bt
 import pandas as pd
 from datetime import datetime
@@ -248,8 +247,6 @@ def print_backtest_result(bt_result, num_transactions: int, level=logging.INFO, 
     logger.log(level,f"Cumulative Return: {bt_result['cumulative_return']:.2%}")
     logger.log(level,f"Annual Return: {annual_return:.2%}")
 
-import argparse
-
 def opt_strategy(filename: str = Config.YFINANCE_FILE_NAME, start_date: str = None, end_date: str = None):
     dataframe =  Dataloader.read_csv(filename)
     if dataframe.empty:
@@ -370,56 +367,3 @@ def opt_strategy(filename: str = Config.YFINANCE_FILE_NAME, start_date: str = No
     print("🎉 優化完成！")
     # for x in watch_list:
     #     print_backtest_result(level=logging.INFO, bt_result=x["bt_result"], num_transactions=5)
-
-
-
-def main():
-    """
-    主執行入口點，用於解析命令列參數並執行 opt_strategy
-    """
-    parser = argparse.ArgumentParser(description="演算法交易框架 - 策略回測優化")
-
-    # 預設的回測日期
-    default_start_date = (datetime.now() - timedelta(days=365)).strftime('%Y-%m-%d')
-    default_end_date = (datetime.now() + timedelta(days=7)).strftime('%Y-%m-%d')
-
-    parser.add_argument(
-        "--filename",
-        type=str,
-        default=Config.YFINANCE_FILE_NAME,
-        help=f"要讀取的 CSV 資料檔案路徑 (預設: {Config.YFINANCE_FILE_NAME})"
-    )
-    parser.add_argument(
-        "--start-date",
-        type=str,
-        default=default_start_date,
-        help=f"回測開始日期 (格式: YYYY-MM-DD，預設: {default_start_date})"
-    )
-    parser.add_argument(
-        "--end-date",
-        type=str,
-        default=default_end_date,
-        help=f"回測結束日期 (格式: YYYY-MM-DD，預設: {default_end_date})"
-    )
-
-    args = parser.parse_args()
-
-    # 驗證日期格式
-    for date_str in [args.start_date, args.end_date]:
-        if date_str:
-            try:
-                datetime.strptime(date_str, '%Y-%m-%d')
-            except ValueError:
-                parser.error(f"日期格式錯誤: {date_str}。請使用 YYYY-MM-DD 格式。")
-
-    print(f"🔄 開始執行 opt_strategy，使用資料檔案: {args.filename}, 日期範圍: {args.start_date} to {args.end_date}")
-
-    opt_strategy(filename=args.filename, start_date=args.start_date, end_date=args.end_date)
-
-
-
-
-
-
-if __name__ == "__main__":
-    main()
