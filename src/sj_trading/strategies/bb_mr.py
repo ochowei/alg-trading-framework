@@ -120,6 +120,7 @@ class BollingerBandsMeanReversion(bt.Strategy):
             # 使用 StrategySignal class
             signal = StrategySignal(
                 date=f"{trade_date}",
+                ticker=self.params.stock_id,
                 action=-1, # 停損賣出 (平倉)
                 size=size,
                 price=price,
@@ -143,6 +144,7 @@ class BollingerBandsMeanReversion(bt.Strategy):
                 # 使用 StrategySignal class
                 signal = StrategySignal(
                     date=f"{trade_date}",
+                    ticker=self.params.stock_id,
                     action=1, # 買入訊號
                     size=size,
                     price=price,
@@ -158,6 +160,7 @@ class BollingerBandsMeanReversion(bt.Strategy):
                 # 使用 StrategySignal class
                 signal = StrategySignal(
                     date=f"{trade_date}",
+                    ticker=self.params.stock_id,
                     action=3, # 買入訊號 (已持倉)
                     size=size,
                     price=price,
@@ -176,6 +179,7 @@ class BollingerBandsMeanReversion(bt.Strategy):
                 # 使用 StrategySignal class
                 signal = StrategySignal(
                     date=f"{trade_date}",
+                    ticker=self.params.stock_id,
                     action=-1, # 賣出訊號 (平倉)
                     size=size,
                     price=price,
@@ -192,6 +196,7 @@ class BollingerBandsMeanReversion(bt.Strategy):
                 # 使用 StrategySignal class
                 signal = StrategySignal(
                     date=f"{trade_date}",
+                    ticker=self.params.stock_id,
                     action=-3, # 賣出訊號 (未持倉)
                     size=size,
                     price=price,
@@ -227,6 +232,7 @@ class BollingerBandsMeanReversion(bt.Strategy):
                 # 使用 StrategySignal class
                 signal = StrategySignal(
                     date=f"{trade_date}",
+                    ticker=self.params.stock_id,
                     action=2, # 買入成交
                     size=size,
                     price=price,
@@ -244,6 +250,7 @@ class BollingerBandsMeanReversion(bt.Strategy):
                 # 使用 StrategySignal class
                 signal = StrategySignal(
                     date=f"{trade_date}",
+                    ticker=self.params.stock_id,
                     action=-2, # 賣出成交
                     size=size,
                     price=price,

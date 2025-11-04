@@ -6,6 +6,9 @@ from rich.table import Table
 from prompt_toolkit import prompt
 from prompt_toolkit.completion import PathCompleter
 from abc import ABC, abstractmethod
+from .models import StrategySignal
+from typing import List, Dict
+from collections import defaultdict
 
 
 class SimulationStrategy(ABC):
@@ -20,7 +23,7 @@ class SimulationStrategy(ABC):
         self.CENTS = Decimal('0.01')
 
     @abstractmethod
-    def run_simulation(self, df: pd.DataFrame):
+    def run_simulation(self, signals: List[StrategySignal]):
         """
         Run the simulation loop. This method must be implemented by subclasses.
         """
@@ -76,42 +79,45 @@ class Mode1Strategy(SimulationStrategy):
     - 買入（2）：將所有可用現金平均分配，用於買入訊號股。
     - 賣出（-2）：賣出訊號股的所有持股。
     """
-    def run_simulation(self, df: pd.DataFrame):
+    def run_simulation(self, signals: List[StrategySignal]):
         print("--- 模擬開始 (Mode: 1) ---")
         print(f"初始資金: ${self.cash.quantize(self.CENTS, rounding=ROUND_HALF_UP):,}")
         print("-" * 30)
 
-        unique_dates = df['date'].unique()
+        signals_by_date: Dict[str, List[StrategySignal]] = defaultdict(list)
+        for sig in signals:
+            signals_by_date[sig.date].append(sig)
 
-        for date in unique_dates:
-            current_day_rows = df[df['date'] == date]
-            date_str = str(pd.to_datetime(date).date())
+        unique_dates = sorted(signals_by_date.keys())
+
+        for date_str in unique_dates:
+            current_day_signals = signals_by_date.get(date_str, [])
             pending_settlement = Decimal('0.0')
 
             # --- Mode 1: Sell logic ---
-            sells = current_day_rows[current_day_rows['action'] == -2]
-            for _, row in sells.iterrows():
-                ticker = row['ticker']
-                sell_price = Decimal(str(row['price']))
+            sells = [sig for sig in current_day_signals if sig.action == -2]
+            for sell_signal in sells:
+                ticker = sell_signal.ticker
+                sell_price = Decimal(str(sell_signal.price))
                 if ticker in self.portfolio:
                     position = self.portfolio.pop(ticker)
                     size_held = position['size']
                     cash_received = size_held * sell_price
                     pending_settlement += cash_received
-                    print(f"{date_str} [bold red]賣出完成[/bold red] {ticker}: (Action: {row['action']} from {date_str})")
+                    print(f"{date_str} [bold red]賣出完成[/bold red] {ticker}: (Action: {sell_signal.action} from {date_str})")
                     print(f"  > 賣出完成 {size_held:.4f} 股 @ ${sell_price:,.2f}，獲得 ${cash_received.quantize(self.CENTS, rounding=ROUND_HALF_UP):,}")
 
             # --- Mode 1: Buy logic ---
-            buys = current_day_rows[current_day_rows['action'] == 2]
+            buys = [sig for sig in current_day_signals if sig.action == 2]
             num_buys = len(buys)
             if num_buys > 0 and self.cash > Decimal('0.01'):
                 cash_per_buy = self.cash / Decimal(num_buys)
                 print(f"{date_str} [bold green]買入準備[/bold green] {num_buys} 個。可用現金 ${self.cash.quantize(self.CENTS, rounding=ROUND_HALF_UP):,}，每個訊號分配 ${cash_per_buy.quantize(self.CENTS, rounding=ROUND_HALF_UP):,}")
                 self.cash = Decimal('0.0')
 
-                for _, row in buys.iterrows():
-                    ticker = row['ticker']
-                    buy_price = Decimal(str(row['price']))
+                for buy_signal in buys:
+                    ticker = buy_signal.ticker
+                    buy_price = Decimal(str(buy_signal.price))
                     if buy_price > 0 and cash_per_buy > 0:
                         size_to_buy = (cash_per_buy / buy_price).to_integral_value(rounding=ROUND_FLOOR)
                         if size_to_buy <= 0:
@@ -138,15 +144,14 @@ class Mode1Strategy(SimulationStrategy):
                                 'cost_basis': buy_price,
                                 'total_cost': actual_cost
                             }
-                        print(f"  > [bold green]買入完成[/bold green] {ticker}: (Action: {row['action']} from {date_str}) 投入 ${actual_cost.quantize(self.CENTS, rounding=ROUND_HALF_UP):,} 購買 {size_to_buy:.0f} 股 @ ${buy_price:,.2f}")
+                        print(f"  > [bold green]買入完成[/bold green] {ticker}: (Action: {buy_signal.action} from {date_str}) 投入 ${actual_cost.quantize(self.CENTS, rounding=ROUND_HALF_UP):,} 購買 {size_to_buy:.0f} 股 @ ${buy_price:,.2f}")
 
             # --- Mode 1: Non-executed orders ---
             if self.show_non_executed_orders:
-                day_trades = current_day_rows
-                sell_signals = day_trades[day_trades['action'] == -1]
-                for _, row in sell_signals.iterrows():
-                    ticker = row['ticker']
-                    sell_price = Decimal(str(row['price']))
+                sell_signals = [sig for sig in current_day_signals if sig.action == -1]
+                for sell_signal in sell_signals:
+                    ticker = sell_signal.ticker
+                    sell_price = Decimal(str(sell_signal.price))
                     if ticker in self.portfolio:
                         position = self.portfolio[ticker]
                         size_held = position['size']
@@ -156,26 +161,26 @@ class Mode1Strategy(SimulationStrategy):
                     else:
                         print(f"{date_str} [yellow]賣出訊號 (M1)[/yellow] {ticker}: 投資組合中無此股票，忽略。")
 
-                sell_signals_ignored = day_trades[day_trades['action'] == -3]
-                for _, row in sell_signals_ignored.iterrows():
-                    ticker = row['ticker']
-                    sell_price = Decimal(str(row['price']))
+                sell_signals_ignored = [sig for sig in current_day_signals if sig.action == -3]
+                for sell_signal in sell_signals_ignored:
+                    ticker = sell_signal.ticker
+                    sell_price = Decimal(str(sell_signal.price))
                     print(f"{date_str} [yellow]無執行賣出訊號 (M1)[/yellow] {ticker}: ${sell_price:,.2f}")
 
-                buys_signals = day_trades[day_trades['action'] == 1]
+                buys_signals = [sig for sig in current_day_signals if sig.action == 1]
                 num_buysignals = len(buys_signals)
                 if num_buysignals > 0:
                     print(f"{date_str} [cyan]買入訊號 (M1)[/cyan] {num_buysignals} 個。")
-                    for _, row in buys_signals.iterrows():
-                        ticker = row['ticker']
-                        buy_price = Decimal(str(row['price']))
-                        print(f"  > [cyan]買入訊號 (M1)[/cyan] {ticker}: @ ${buy_price:,.2f}, 觸發 {row.get('trigger', 'N/A'):,.2f}, 停損 {row.get('stop_loss', 'N/A'):,.2f}")
+                    for buy_signal in buys_signals:
+                        ticker = buy_signal.ticker
+                        buy_price = Decimal(str(buy_signal.price))
+                        print(f"  > [cyan]買入訊號 (M1)[/cyan] {ticker}: @ ${buy_price:,.2f}, 觸發 {buy_signal.trigger or 'N/A'}, 停損 {buy_signal.stop_loss or 'N/A'}")
 
-                buys_signals_ignored = day_trades[day_trades['action'] == 3]
-                for _, row in buys_signals_ignored.iterrows():
-                    ticker = row['ticker']
-                    buy_price = Decimal(str(row['price']))
-                    print(f"{date_str} [cyan]無執行買入訊號 (M1)[/cyan] {ticker}: ${buy_price:,.2f} 觸發 {row.get('trigger', 'N/A'):,.2f} 停損 {row.get('stop_loss', 'N/A'):,.2f}")
+                buys_signals_ignored = [sig for sig in current_day_signals if sig.action == 3]
+                for buy_signal in buys_signals_ignored:
+                    ticker = buy_signal.ticker
+                    buy_price = Decimal(str(buy_signal.price))
+                    print(f"{date_str} [cyan]無執行買入訊號 (M1)[/cyan] {ticker}: ${buy_price:,.2f} 觸發 {buy_signal.trigger or 'N/A'} 停損 {buy_signal.stop_loss or 'N/A'}")
 
             self.cash += pending_settlement
 
@@ -190,46 +195,50 @@ class Mode2Strategy(SimulationStrategy):
     - 買入（1, 3）：將 T 日的所有可用現金平均分配，用於買入 T-1 日的訊號股。
     - 賣出（-1, -3）：賣出 T-1 日訊號股的所有持股。
     """
-    def run_simulation(self, df: pd.DataFrame):
+    def run_simulation(self, signals: List[StrategySignal]):
         print("--- 模擬開始 (Mode: 2) ---")
         print(f"初始資金: ${self.cash.quantize(self.CENTS, rounding=ROUND_HALF_UP):,}")
         print("-" * 30)
 
-        unique_dates = df['date'].unique()
+        signals_by_date: Dict[str, List[StrategySignal]] = defaultdict(list)
+        for sig in signals:
+            signals_by_date[sig.date].append(sig)
+
+        unique_dates = sorted(signals_by_date.keys())
+
         previous_date = None
 
-        for date in unique_dates:
-            current_day_rows = df[df['date'] == date]
-            previous_day_rows = pd.DataFrame(columns=df.columns) if previous_date is None else df[df['date'] == previous_date]
-            date_str = str(pd.to_datetime(date).date())
+        for date_str in unique_dates:
+            current_day_signals = signals_by_date.get(date_str, [])
+            previous_day_signals = signals_by_date.get(previous_date, []) if previous_date else []
             pending_settlement = Decimal('0.0')
 
             # --- Mode 2: Sell logic ---
-            sells = previous_day_rows[previous_day_rows['action'].isin([-1, -3])]
-            for _, row in sells.iterrows():
-                ticker = row['ticker']
-                sell_price = Decimal(str(row['price']))
+            sells = [sig for sig in previous_day_signals if sig.action in [-1, -3]]
+            for sell_signal in sells:
+                ticker = sell_signal.ticker
+                sell_price = Decimal(str(sell_signal.price))
                 if ticker in self.portfolio:
                     position = self.portfolio.pop(ticker)
                     size_held = position['size']
                     cash_received = size_held * sell_price
                     pending_settlement += cash_received
-                    signal_date_str = str(pd.to_datetime(row['date']).date())
-                    print(f"{date_str} [bold red]賣出完成[/bold red] {ticker}: (Action: {row['action']} from {signal_date_str})")
+                    signal_date_str = sell_signal.date
+                    print(f"{date_str} [bold red]賣出完成[/bold red] {ticker}: (Action: {sell_signal.action} from {signal_date_str})")
                     print(f"  > 賣出完成 {size_held:.4f} 股 @ ${sell_price:,.2f}，獲得 ${cash_received.quantize(self.CENTS, rounding=ROUND_HALF_UP):,}")
 
             # --- Mode 2: Buy logic ---
-            buys = previous_day_rows[previous_day_rows['action'].isin([1, 3])]
+            buys = [sig for sig in previous_day_signals if sig.action in [1, 3]]
             num_buys = len(buys)
             if num_buys > 0 and self.cash > Decimal('0.01'):
                 cash_per_buy = self.cash / Decimal(num_buys)
                 print(f"{date_str} [bold green]買入準備[/bold green] {num_buys} 個。可用現金 ${self.cash.quantize(self.CENTS, rounding=ROUND_HALF_UP):,}，每個訊號分配 ${cash_per_buy.quantize(self.CENTS, rounding=ROUND_HALF_UP):,}")
                 self.cash = Decimal('0.0')
 
-                for _, row in buys.iterrows():
-                    ticker = row['ticker']
-                    buy_price = Decimal(str(row['price']))
-                    signal_date_str = str(pd.to_datetime(row['date']).date())
+                for buy_signal in buys:
+                    ticker = buy_signal.ticker
+                    buy_price = Decimal(str(buy_signal.price))
+                    signal_date_str = buy_signal.date
                     if buy_price > 0 and cash_per_buy > 0:
                         size_to_buy = (cash_per_buy / buy_price).to_integral_value(rounding=ROUND_FLOOR)
                         if size_to_buy <= 0:
@@ -256,53 +265,52 @@ class Mode2Strategy(SimulationStrategy):
                                 'cost_basis': buy_price,
                                 'total_cost': actual_cost
                             }
-                        print(f"  > [bold green]買入完成[/bold green] {ticker}: (Action: {row['action']} from {signal_date_str}) 投入 ${actual_cost.quantize(self.CENTS, rounding=ROUND_HALF_UP):,} 購買 {size_to_buy:.0f} 股 @ ${buy_price:,.2f}")
+                        print(f"  > [bold green]買入完成[/bold green] {ticker}: (Action: {buy_signal.action} from {signal_date_str}) 投入 ${actual_cost.quantize(self.CENTS, rounding=ROUND_HALF_UP):,} 購買 {size_to_buy:.0f} 股 @ ${buy_price:,.2f}")
 
             # --- Mode 2: Non-executed orders ---
             if self.show_non_executed_orders:
-                day_trades = current_day_rows
-                sell_signals_ignored = day_trades[day_trades['action'] == -2]
-                for _, row in sell_signals_ignored.iterrows():
-                    ticker = row['ticker']
-                    sell_price = Decimal(str(row['price']))
+                sell_signals_ignored = [sig for sig in current_day_signals if sig.action == -2]
+                for sell_signal in sell_signals_ignored:
+                    ticker = sell_signal.ticker
+                    sell_price = Decimal(str(sell_signal.price))
                     print(f"{date_str} [yellow]無執行賣出訊號 (M2)[/yellow] {ticker}: ${sell_price:,.2f}")
 
-                buys_signals_ignored = day_trades[day_trades['action'] == 2]
-                for _, row in buys_signals_ignored.iterrows():
-                    ticker = row['ticker']
-                    buy_price = Decimal(str(row['price']))
+                buys_signals_ignored = [sig for sig in current_day_signals if sig.action == 2]
+                for buy_signal in buys_signals_ignored:
+                    ticker = buy_signal.ticker
+                    buy_price = Decimal(str(buy_signal.price))
                     print(f"{date_str} [cyan]無執行買入訊號 (M2)[/cyan] {ticker}: ${buy_price:,.2f}")
 
-                sell_signals = day_trades[day_trades['action'] == -1]
-                sell_signals_3 = day_trades[day_trades['action'] == -3]
-                buys_signals = day_trades[day_trades['action'] == 1]
-                buys_signals_3 = day_trades[day_trades['action'] == 3]
+                sell_signals = [sig for sig in current_day_signals if sig.action == -1]
+                sell_signals_3 = [sig for sig in current_day_signals if sig.action == -3]
+                buys_signals = [sig for sig in current_day_signals if sig.action == 1]
+                buys_signals_3 = [sig for sig in current_day_signals if sig.action == 3]
 
-                if not (sell_signals.empty and sell_signals_3.empty and buys_signals.empty and buys_signals_3.empty):
+                if sell_signals or sell_signals_3 or buys_signals or buys_signals_3:
                     print(f"{date_str} [dim] --- Mode 2 T日訊號 (將於 T+1 執行) --- [/dim]")
                     
-                    for _, row in sell_signals.iterrows():
-                        ticker = row['ticker']
-                        sell_price = Decimal(str(row['price']))
+                    for sell_signal in sell_signals:
+                        ticker = sell_signal.ticker
+                        sell_price = Decimal(str(sell_signal.price))
                         print(f"{date_str} [magenta]T日賣出訊號 (-1)[/magenta] {ticker}: @ ${sell_price:,.2f}")
 
-                    for _, row in sell_signals_3.iterrows():
-                        ticker = row['ticker']
-                        sell_price = Decimal(str(row['price']))
+                    for sell_signal in sell_signals_3:
+                        ticker = sell_signal.ticker
+                        sell_price = Decimal(str(sell_signal.price))
                         print(f"{date_str} [magenta]T日賣出訊號 (-3)[/magenta] {ticker}: ${sell_price:,.2f}")
 
-                    for _, row in buys_signals.iterrows():
-                        ticker = row['ticker']
-                        buy_price = Decimal(str(row['price']))
-                        print(f"{date_str} [blue]T日買入訊號 (1)[/blue] {ticker}: @ ${buy_price:,.2f}, 觸發 {row.get('trigger', 'N/A'):,.2f}, 停損 {row.get('stop_loss', 'N/A'):,.2f}")
+                    for buy_signal in buys_signals:
+                        ticker = buy_signal.ticker
+                        buy_price = Decimal(str(buy_signal.price))
+                        print(f"{date_str} [blue]T日買入訊號 (1)[/blue] {ticker}: @ ${buy_price:,.2f}, 觸發 {buy_signal.trigger or 'N/A'}, 停損 {buy_signal.stop_loss or 'N/A'}")
 
-                    for _, row in buys_signals_3.iterrows():
-                        ticker = row['ticker']
-                        buy_price = Decimal(str(row['price']))
-                        print(f"{date_str} [blue]T日買入訊號 (3)[/blue] {ticker}: @ ${buy_price:,.2f} 觸發 {row.get('trigger', 'N/A'):,.2f} 停損 {row.get('stop_loss', 'N/A'):,.2f}")
+                    for buy_signal in buys_signals_3:
+                        ticker = buy_signal.ticker
+                        buy_price = Decimal(str(buy_signal.price))
+                        print(f"{date_str} [blue]T日買入訊號 (3)[/blue] {ticker}: @ ${buy_price:,.2f} 觸發 {buy_signal.trigger or 'N/A'} 停損 {buy_signal.stop_loss or 'N/A'}")
 
             self.cash += pending_settlement
-            previous_date = date
+            previous_date = date_str
 
         return self._print_final_summary()
 
@@ -332,6 +340,21 @@ def simulate_trades(file_path, initial_capital, show_non_executed_orders=False, 
     df['date'] = pd.to_datetime(df['date'])
     df = df.sort_values(by='date')
 
+    signals_list = [
+        StrategySignal(
+            date=row['date'].strftime('%Y-%m-%d'),
+            ticker=row['ticker'],
+            action=row['action'],
+            size=row['size'],
+            price=row['price'],
+            total=row['total'],
+            trigger=row.get('trigger'),
+            stop_loss=row.get('stop_loss'),
+            stop_loss_trigger=row.get('stop_loss_trigger'),
+            pnl=row.get('pnl')
+        ) for _, row in df.iterrows()
+    ]
+
     strategy: SimulationStrategy
     if mode == 1:
         strategy = Mode1Strategy(initial_capital, show_non_executed_orders)
@@ -341,7 +364,7 @@ def simulate_trades(file_path, initial_capital, show_non_executed_orders=False, 
         print(f"Error: Invalid mode '{mode}'. Please use 1 or 2.")
         return
 
-    return strategy.run_simulation(df)
+    return strategy.run_simulation(signals_list)
 
 @click.command()
 @click.option(

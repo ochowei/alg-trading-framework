@@ -1,6 +1,7 @@
 import backtrader as bt
 from datetime import datetime
 from sj_trading.logger import init_logger
+from sj_trading.models import StrategySignal
 
 class Turtle_v4_1(bt.Strategy):
     """
@@ -72,25 +73,32 @@ class Turtle_v4_1(bt.Strategy):
             size = max_position_value / price  # 調整 size 以符合最大倉位限制
 
         size = int(size)
-        if  self.adx[0] > 20 and self.boll_width[0] > self.atr[0] and price > self.entry_high[0]:
+        if self.adx[0] > 20 and self.boll_width[0] > self.atr[0] and price > self.entry_high[0]:
             self.logger.debug(f"💡 {trade_date} | 嘗試買入 {self.params.stock_id} @ {price:.2f} | Size: {size}")
-            self.signal_list.append({ "date": f"{trade_date}",
-                        "action": 1,
-                        "size": size,
-                        "price": price,
-                        "total": -size * price,})
+            signal = StrategySignal(
+                date=f"{trade_date}",
+                ticker=self.params.stock_id,
+                action=1,
+                size=size,
+                price=price,
+                total=-size * price,
+            )
+            self.signal_list.append(signal.to_dict())
             if not self.position or True:
                 self.buy(size=size)
             self.last_trade_date = trade_date
         elif price < self.exit_low[0]:
             self.logger.debug(f"💡 {trade_date} | 嘗試賣出 {self.params.stock_id} @ {price:.2f}")
             if self.position:
-                self.signal_list.append({ "date": f"{trade_date}",
-                            "action": -1,
-                            "size": -size,
-                            "price": price,
-                            "total": size * price
-                            })
+                signal = StrategySignal(
+                    date=f"{trade_date}",
+                    ticker=self.params.stock_id,
+                    action=-1,
+                    size=-size,
+                    price=price,
+                    total=size * price,
+                )
+                self.signal_list.append(signal.to_dict())
                 self.close()
             self.last_trade_date = trade_date
 
@@ -199,7 +207,15 @@ class Turtle_v4_1_1(bt.Strategy):
                 return
 
             self.logger.debug(f"💡 {trade_date} | 嘗試買入 {self.params.stock_id} @ {price:.2f} | Size: {size}")
-            self.signal_list.append({ "date": f"{trade_date}", "action": 1, "size": size, "price": price, "total": -size * price })
+            signal = StrategySignal(
+                date=f"{trade_date}",
+                ticker=self.params.stock_id,
+                action=1,
+                size=size,
+                price=price,
+                total=-size * price,
+            )
+            self.signal_list.append(signal.to_dict())
             if not self.position or strong_kbar:  # 只有在強K日才加碼或建倉
                 self.buy(size=size)
             self.last_trade_date = trade_date
@@ -208,7 +224,15 @@ class Turtle_v4_1_1(bt.Strategy):
             reason = "突破低點" if price < self.exit_low[0] else "出現長上影線"
             self.logger.debug(f"💡 {trade_date} | 嘗試賣出 {self.params.stock_id} @ {price:.2f} | 原因: {reason}")
             if self.position:
-                self.signal_list.append({ "date": f"{trade_date}", "action": -1, "size": -size, "price": price, "total": size * price })
+                signal = StrategySignal(
+                    date=f"{trade_date}",
+                    ticker=self.params.stock_id,
+                    action=-1,
+                    size=-size,
+                    price=price,
+                    total=size * price,
+                )
+                self.signal_list.append(signal.to_dict())
                 self.close()
             self.last_trade_date = trade_date
 

@@ -1,6 +1,8 @@
 import backtrader as bt
 from datetime import datetime
 from sj_trading.logger import init_logger
+from sj_trading.models import StrategySignal
+
 
 class RsiMeanReversion(bt.Strategy):
     """
@@ -99,7 +101,15 @@ class RsiMeanReversion(bt.Strategy):
         if not self.position and current_rsi < self.params.rsi_oversold:
             self.logger.debug(f"💡 {trade_date} | RSI {current_rsi:.2f} 跌破超賣線 {self.params.rsi_oversold} | 嘗試買入 | Size: {size}")
             self.order = self.buy(size=size)
-            self.signal_list.append({ "date": f"{trade_date}", "action": 1, "size": size, "price": price, "total": -size * price })
+            signal = StrategySignal(
+                date=f"{trade_date}",
+                ticker=self.params.stock_id,
+                action=1,
+                size=size,
+                price=price,
+                total=-size * price,
+            )
+            self.signal_list.append(signal.to_dict())
 
             self.last_trade_date = trade_date # 記錄交易日期
 
@@ -107,7 +117,15 @@ class RsiMeanReversion(bt.Strategy):
         elif self.position and current_rsi >= self.params.rsi_exit_level:
             self.logger.debug(f"💡 {trade_date} | RSI {current_rsi:.2f} 回到中線 {self.params.rsi_exit_level} | 嘗試賣出 (平倉)")
             self.order = self.close() # 平掉所有倉位
-            self.signal_list.append({ "date": f"{trade_date}", "action": 1, "size": size, "price": price, "total": -size * price })
+            signal = StrategySignal(
+                date=f"{trade_date}",
+                ticker=self.params.stock_id,
+                action=-1,
+                size=size,
+                price=price,
+                total=size * price,
+            )
+            self.signal_list.append(signal.to_dict())
             self.last_trade_date = trade_date # 記錄交易日期
 
     def notify_order(self, order):
