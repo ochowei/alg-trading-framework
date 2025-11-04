@@ -11,6 +11,8 @@ from workflow import main as workflow_main, opt_strategy
 from run_strategy import run_strategy_logic
 from sj_trading.simulation import simulate as simulate_cli, simulate_trades
 from sj_trading.config import Config
+from sj_trading.dataloader import Dataloader
+import pandas as pd
 
 def show_interactive_menu():
     """
@@ -22,16 +24,33 @@ def show_interactive_menu():
     while True:
         console.print(Panel.fit(
             "[bold cyan]請選擇要執行的工作流程：[/bold cyan]\n\n"
-            "[green]1.[/green] 執行策略優化 (Optimize Strategy)\n"
-            "[green]2.[/green] 執行策略回測 (Run Strategy)\n"
-            "[green]3.[/green] 執行交易模擬 (Simulate Trades)\n"
-            "[red]4.[/red] 離開 (Exit)\n",
+            "[green]1.[/green] 檢查資料最新時間 (Check Data Timestamp)\n"
+            "[green]2.[/green] 執行策略優化 (Optimize Strategy)\n"
+            "[green]3.[/green] 執行策略回測 (Run Strategy)\n"
+            "[green]4.[/green] 執行交易模擬 (Simulate Trades)\n"
+            "[red]5.[/red] 離開 (Exit)\n",
             title="互動式主選單"
         ))
 
-        choice = Prompt.ask("請輸入選項 [1-4]", choices=["1", "2", "3", "4"], default="4")
+        choice = Prompt.ask("請輸入選項 [1-5]", choices=["1", "2", "3", "4", "5"], default="5")
 
         if choice == "1":
+            console.print("\n[bold yellow]執行檢查資料最新時間...[/bold yellow]\n")
+            try:
+                filename = toolkit_prompt(
+                    "請輸入資料檔案路徑: ",
+                    completer=path_completer,
+                    default=Config.YFINANCE_FILE_NAME
+                )
+                df = Dataloader.read_csv(filename)
+                if df.empty:
+                    console.print(f"[bold red]檔案 {filename} 為空或格式不正確。[/bold red]")
+                else:
+                    latest_date = df['Date'].max()
+                    console.print(f"檔案 {filename} 的最新股價日期為: {latest_date.strftime('%Y-%m-%d')}")
+            except Exception as e:
+                console.print(f"[bold red]檢查檔案時發生錯誤：{e}[/bold red]")
+        elif choice == "2":
             console.print("\n[bold yellow]執行策略優化...[/bold yellow]\n")
             try:
                 filename = toolkit_prompt(
@@ -50,7 +69,7 @@ def show_interactive_menu():
                 opt_strategy(filename=filename, start_date=start_date, end_date=end_date)
             except Exception as e:
                 console.print(f"[bold red]執行策略優化時發生錯誤：{e}[/bold red]")
-        elif choice == "2":
+        elif choice == "3":
             console.print("\n[bold yellow]執行策略回測...[/bold yellow]\n")
             try:
                 data_file = toolkit_prompt(
@@ -82,7 +101,7 @@ def show_interactive_menu():
                 )
             except Exception as e:
                 console.print(f"[bold red]執行策略回測時發生錯誤：{e}[/bold red]")
-        elif choice == "3":
+        elif choice == "4":
             console.print("\n[bold yellow]執行交易模擬...[/bold yellow]\n")
             try:
                 file_path = toolkit_prompt(
@@ -115,7 +134,7 @@ def show_interactive_menu():
                  console.print("\n[bold red]操作中止。[/bold red]")
             except Exception as e:
                 console.print(f"[bold red]執行交易模擬時發生錯誤：{e}[/bold red]")
-        elif choice == "4":
+        elif choice == "5":
             console.print("\n[bold]程式結束。[/bold]\n")
             break
 
