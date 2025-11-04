@@ -1,4 +1,3 @@
-import argparse
 import json
 from datetime import datetime
 from pathlib import Path
@@ -168,40 +167,3 @@ def run_strategy_logic(data_file, input_file, output_file, start_date=None, end_
         print("所有策略執行完畢，但未產生任何交易訊號。")
 
 
-def run_strategy_cli():
-    """
-    CLI 進入點，用於根據儲存的最佳參數重新執行策略。
-    """
-    parser = argparse.ArgumentParser(description="使用最佳化後的參數執行單洄測，並產生交易訊號。")
-    parser.add_argument(
-        "--data-file",
-        type=str,
-        default=Config.YFINANCE_FILE_NAME,
-        help=f"包含市場數據的 CSV 檔案 (預設: {Config.YFINANCE_FILE_NAME})"
-    )
-    parser.add_argument(
-        "--input-file",
-        type=str,
-        default="output/best_strategy_params.json",
-        help="包含最佳策略參數的 JSON 檔案 (預設: output/best_strategy_params.json)"
-    )
-    parser.add_argument(
-        "--output-file",
-        type=str,
-        default="output/strategy_trades.json",
-        help="儲存交易訊號的輸出 JSON 檔案 (預設: output/strategy_trades.json)"
-    )
-    parser.add_argument("--start-date", type=str, help="覆寫所有策略的開始日期 (YYYY-MM-DD)。")
-    parser.add_argument("--end-date", type=str, help="覆寫所有策略的結束日期 (YYYY-MM-DD)。")
-    parser.add_argument("--skip-dates", type=str, help="覆寫所有策略要跳過的日期 (YYYY-MM-DD,YYYY-MM-DD)。")
-
-    args = parser.parse_args()
-
-    run_strategy_logic(
-        data_file=args.data_file,
-        input_file=args.input_file,
-        output_file=args.output_file,
-        start_date=args.start_date,
-        end_date=args.end_date,
-        skip_dates=args.skip_dates
-    )

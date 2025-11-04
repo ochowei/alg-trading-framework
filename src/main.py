@@ -10,6 +10,7 @@ from datetime import datetime, timedelta
 from workflow import main as workflow_main, opt_strategy
 from run_strategy import run_strategy_logic
 from sj_trading.simulation import simulate as simulate_cli, simulate_trades
+from sj_trading.download_data import download_data
 from sj_trading.config import Config
 from sj_trading.dataloader import Dataloader
 import pandas as pd
@@ -204,6 +205,24 @@ def run(data_file, input_file, output_file, start_date, end_date, skip_dates):
         end_date=end_date,
         skip_dates=skip_dates
     )
+
+@cli.command(name="download")
+@click.option(
+    "--start-date",
+    type=str,
+    default=None,
+    help="下載開始日期 (格式: YYYY-MM-DD)。預設為 1000 天前。"
+)
+@click.option(
+    "--end-date",
+    type=str,
+    default=None,
+    help="下載結束日期 (格式: YYYY-MM-DD)。預設為 7 天後。"
+)
+def download(start_date, end_date):
+    """下載 yfinance 股價資料"""
+    download_data(start_date=start_date, end_date=end_date)
+
 
 cli.add_command(simulate_cli, "sim")
 
