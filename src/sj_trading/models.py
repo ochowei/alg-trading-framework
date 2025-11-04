@@ -13,6 +13,7 @@ class StrategySignal:
     
     # --- 核心欄位 ---
     date: str
+    ticker: str  # <-- 新增此欄位
     action: int 
     size: int
     price: float
