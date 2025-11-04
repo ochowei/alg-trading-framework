@@ -151,9 +151,6 @@ def run_strategy_logic(data_file, input_file, output_file, start_date=None, end_
         signal_list = run_strategy_once(dataframe, ticker, strategy_class, parameters)
 
         if signal_list:
-            # 將 ticker 加入每個交易訊號中
-            for trade in signal_list:
-                trade['ticker'] = ticker
             all_trades.extend(signal_list)
 
     # 6. 排序並儲存結果
