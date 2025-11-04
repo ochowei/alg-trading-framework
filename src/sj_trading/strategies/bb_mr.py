@@ -1,6 +1,8 @@
 import backtrader as bt
 from datetime import datetime
 from sj_trading.logger import init_logger, close_logger
+from sj_trading.models import StrategySignal
+
 
 class BollingerBandsMeanReversion(bt.Strategy):
     """
@@ -96,13 +98,6 @@ class BollingerBandsMeanReversion(bt.Strategy):
              self.logger.warning(f"⚠️ {trade_date} | ATR 為 0，無法計算倉位大小")
              return
 
-        # 風險額度 = 帳戶總值 * 風險比例
-        # risk_amount = portfolio_value * self.params.risk
-        # 每股曝險 = ATR * (某個倍數，例如 2) -> 這裡簡單用 ATR 本身作為波動參考
-        # 或者更簡單地，直接用價格的某個百分比，例如 1%
-        # risk_per_share = atr_value * 2
-        # size = risk_amount / risk_per_share
-
         # 另一種簡化倉位計算：使用固定比例的資金
         target_value = portfolio_value * self.params.risk # 每次投入風險比例的資金
         size = target_value / price
@@ -121,7 +116,18 @@ class BollingerBandsMeanReversion(bt.Strategy):
         
         if self.position and self.stop_price and price < self.stop_price:
             self.logger.debug(f"💡 {trade_date} | 價格 {price:.2f} 觸及停損價 {self.stop_price:.2f} | 停損賣出")
-            self.signal_list.append({ "date": f"{trade_date}", "action": -1, "size": size, "price": price, "total": size * price, "stop_loss_trigger": self.stop_price })
+            
+            # 使用 StrategySignal class
+            signal = StrategySignal(
+                date=f"{trade_date}",
+                action=-1, # 停損賣出 (平倉)
+                size=size,
+                price=price,
+                total=size * price,
+                stop_loss_trigger=self.stop_price # 記錄觸發的停損價
+            )
+            self.signal_list.append(signal.to_dict())
+            
             self.close()
             self.last_trade_date = trade_date
             return
@@ -134,11 +140,32 @@ class BollingerBandsMeanReversion(bt.Strategy):
             stop_price = price * (1.0 - self.params.stop_loss_pct)
 
             if not self.position:
-                self.signal_list.append({ "date": f"{trade_date}", "action": 1, "size": size, "price": price, "total": -size * price, "trigger": self.bot_band[0] , "stop_loss": stop_price })
+                # 使用 StrategySignal class
+                signal = StrategySignal(
+                    date=f"{trade_date}",
+                    action=1, # 買入訊號
+                    size=size,
+                    price=price,
+                    total=-size * price,
+                    trigger=self.bot_band[0], # 記錄觸發的 BB 下軌價
+                    stop_loss=stop_price # 記錄計算出的停損價
+                )
+                self.signal_list.append(signal.to_dict())
+                
                 self.order = self.buy(size=size,exectype=bt.Order.Limit, price=(price+high)/2) # 限價單買入              
                 self.last_trade_date = trade_date # 記錄交易日期
             else:
-                self.signal_list.append({ "date": f"{trade_date}", "action": 3, "size": size, "price": price, "total": -size * price, "trigger": self.bot_band[0], "stop_loss": stop_price })
+                # 使用 StrategySignal class
+                signal = StrategySignal(
+                    date=f"{trade_date}",
+                    action=3, # 買入訊號 (已持倉)
+                    size=size,
+                    price=price,
+                    total=-size * price,
+                    trigger=self.bot_band[0],
+                    stop_loss=stop_price
+                )
+                self.signal_list.append(signal.to_dict())
 
 
         # 出場邏輯：價格回升觸及中線且目前持有倉位
@@ -146,13 +173,32 @@ class BollingerBandsMeanReversion(bt.Strategy):
             self.logger.debug(f"💡 {trade_date} | 價格 {price:.2f} 回到中線 {self.sma[0]:.2f} | 嘗試賣出 (平倉)")
             
             if self.position:
-                self.signal_list.append({ "date": f"{trade_date}", "action": -1, "size": size, "price": price, "total": size * price, "trigger": self.sma[0] })
+                # 使用 StrategySignal class
+                signal = StrategySignal(
+                    date=f"{trade_date}",
+                    action=-1, # 賣出訊號 (平倉)
+                    size=size,
+                    price=price,
+                    total=size * price,
+                    trigger=self.sma[0] # 記錄觸發的 SMA 價格
+                )
+                self.signal_list.append(signal.to_dict())
+
                 if self.stop_loss_order:
                     self.cancel(self.stop_loss_order)
                 self.close()
                 self.last_trade_date = trade_date # 記錄交易日期
             else:
-                self.signal_list.append({ "date": f"{trade_date}", "action": -3, "size": size, "price": price, "total": size * price, "trigger": self.sma[0]})
+                # 使用 StrategySignal class
+                signal = StrategySignal(
+                    date=f"{trade_date}",
+                    action=-3, # 賣出訊號 (未持倉)
+                    size=size,
+                    price=price,
+                    total=size * price,
+                    trigger=self.sma[0]
+                )
+                self.signal_list.append(signal.to_dict())
 
     def notify_order(self, order):
         trade_date = self.datas[0].datetime.date(0)
@@ -178,24 +224,33 @@ class BollingerBandsMeanReversion(bt.Strategy):
             self.order = None
 
             if order.isbuy():
-                self.signal_list.append({ "date": f"{trade_date}", "action": 2, "size": size, "price": price, "total": -size * price, "pnl": pnl})
+                # 使用 StrategySignal class
+                signal = StrategySignal(
+                    date=f"{trade_date}",
+                    action=2, # 買入成交
+                    size=size,
+                    price=price,
+                    total=-size * price, # 買入成本為負
+                    pnl=pnl # 記錄 PnL
+                )
+                self.signal_list.append(signal.to_dict())
+
                 stop_price = 0
                 log_msg = ""
 
-                # if self.params.stop_loss_atr_multiplier > 0:
-                #     stop_price = price - self.atr[0] * self.params.stop_loss_atr_multiplier
-                #     log_msg = f"ℹ️ 提交 ATR 停損單. 觸發價: {stop_price:.2f}"
-
-                # if self.params.stop_loss_pct > 0:
-                #     stop_price = price * (1.0 - self.params.stop_loss_pct)
-                #     log_msg = f"ℹ️ 提交百分比停損單. 觸發價: {stop_price:.2f}"
-
-                # if stop_price > 0:
-                #     self.stop_loss_order = self.sell(exectype=bt.Order.Stop, price=stop_price, size=size)
-                #     self.logger.debug(log_msg)
+                # ... (停損單邏輯) ...
 
             elif order.issell():
-                self.signal_list.append({ "date": f"{trade_date}", "action": -2, "size": size, "price": price, "total": -size * price, "pnl": pnl })
+                # 使用 StrategySignal class
+                signal = StrategySignal(
+                    date=f"{trade_date}",
+                    action=-2, # 賣出成交
+                    size=size,
+                    price=price,
+                    total=size * price, # 賣出收入為正 (原碼為 -size*price, 這裡修正為正)
+                    pnl=pnl # 記錄 PnL
+                )
+                self.signal_list.append(signal.to_dict())
                 self.stop_loss_order = None
 
         elif order.status in [order.Canceled, order.Margin, order.Rejected]:
