@@ -21,7 +21,7 @@ dependencies = [
 
 [project.scripts]
 main = "main:cli"
-opt_strategy = "workflow:main"
+opt_strategy = "optimization:main"
 simulate = "sj_trading.simulation:simulate"
 download_data = "sj_trading.download_data:download_data_cli"
 zip = "zip:zip_project_folder"

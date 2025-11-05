@@ -7,7 +7,7 @@ from prompt_toolkit.completion import PathCompleter
 from datetime import datetime, timedelta
 
 # Import the functions from other scripts
-from workflow import main as workflow_main, opt_strategy
+from optimization import main as workflow_main, opt_strategy
 from run_strategy import run_strategy_logic
 from sj_trading.simulation import simulate as simulate_cli, simulate_trades
 from sj_trading.config import Config
